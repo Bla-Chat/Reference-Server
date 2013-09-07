@@ -1,0 +1,228 @@
+textarea {
+	width: 80%;
+}
+
+video {
+	max-width: 100%;
+	min-width: 100%;
+}
+
+img {
+	max-width: 100%;
+	min-width: 100%;
+}
+
+.yScrollPane {
+	overflow-x: hidden;
+	overflow-y: scroll;
+}
+
+.xScrollPane {
+	overflow-x: scroll;
+	overflow-y: hidden;
+	white-space: nowrap;
+}
+
+.scrollPane {
+	overflow: auto;
+}
+
+.staticPane {
+	overflow: hidden;
+}
+
+.button {
+	text-decoration: none;
+}
+
+.dbutton {
+	display: inline;
+	min-width: 350px;
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(240,240,240);
+}
+.dbutton:hover {
+	display: inline;
+	min-width: 350px;
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(245,245,245);
+}
+.dbuttonMarked {
+	display: inline;
+	min-width: 350px;
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(255,200,200);
+}
+.dbuttonMarked:hover {
+	display: inline;
+	min-width: 350px;
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(255,230,230);
+}
+.dbuttonActive {
+	display: inline;
+	min-width: 350px;
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(230,230,255);
+}
+.dbuttonActive:hover {
+	display: inline;
+	min-width: 350px;
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(245,245,255);
+}
+
+.dcontactbutton {
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(240,240,240);
+}
+.dcontactbutton:hover {
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(245,245,245);
+}
+.dcontactbuttonOnline {
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(200,255,200);
+}
+.dcontactbuttonOnline:hover {
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(220,255,220);
+}
+.dcontactbuttonInactive {
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(245,245,230);
+}
+.dcontactbuttonInactive:hover {
+	margin: 1px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(250,250,235);
+}
+
+#topBar {
+	color:rgb(30,30,30);
+	background: rgb(230,230,230);
+	font-size: 1.4em;
+	padding-top: 14px;
+	padding-left: 14px;
+	padding-right: 14px;
+	padding-bottom: 4px;
+	margin-left: -10px;
+	margin-top: -8px;
+	margin-right: -8px;
+}
+#tabBar {
+	color:rgb(30,30,30);
+	background: rgb(250,250,250);
+	padding-top: 14px;
+	padding-bottom: 14px;
+	margin-left: -10px;
+	margin-right: -8px;
+}
+
+#listPane {
+	color:rgb(30,30,30);
+	background: rgb(250,250,250);
+	margin-left: -10px;
+	float: left;
+	width: 20%;
+}
+
+#container {
+}
+
+.profile {
+	float:left;
+	max-width: 5%;
+	min-width: 5%;
+}
+.profile2 {
+	float:right;
+	max-width: 5%;
+	min-width: 5%;
+}
+.profile3 {
+	float:left;
+	margin-top: -6px;
+	margin-right: 5px;
+	max-width: 30px;
+	min-width: 10px;
+	max-height: 30px;
+}
+
+.videoContainer {
+	background: rgb(0,0,0);
+}
+
+.audioContainer {
+	background: rgb(0,0,0);
+}
+.messageWrapper {
+	display: inline-block;
+	max-width: 98%;
+	min-width: 98%;
+	margin: 1%;
+}
+.messageOther {
+	min-width: 10%;
+	max-width: 70%;
+	display: inline-block;
+	color:rgb(30,30,100);
+	background: rgb(245,245,255);
+	padding: 15px;
+}
+.messageYou {
+	min-width: 10%;
+	max-width: 60%;
+	display: inline-block;
+	color:rgb(30,100,30);
+	background: rgb(245,255,245);
+	padding: 15px;
+}
+.msgHeader {
+	display: inline-block;
+	font-style: italic;
+}
+.msgHeaderName {
+	display: inline-block;
+	font-size: 0.85em;
+}
+
+.msgHeaderTime {
+	display: inline-block;
+	font-size: 0.75em;
+}
+
+.msgBody {
+	max-width: 100%;
+	display: inline-block;
+	white-space:pre-wrap;
+	word-wrap: break-word;
+	color:rgb(30,30,30);
+	margin-left: 10px;
+}
+#chatContainer {
+	overflow-y: scroll;
+}

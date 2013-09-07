@@ -1,0 +1,1 @@
+You do not put any data here, this is a folder where the api stores data that is transfered between devices.
