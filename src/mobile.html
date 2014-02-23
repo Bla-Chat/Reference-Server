@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name='viewport' content='initial-scale=1.0, user-scalable=no'>
+<meta charset="UTF-8">
+<title>Hangout</title>
+<script type="text/javascript">window.mobilecheck = true;</script>
+<script src="https://www.ssl-id.de/hangout.f-online.net/engine/adapter.js"></script>
+<script src="https://www.ssl-id.de/hangout.f-online.net/engine/helper.js"></script>
+<link rel="stylesheet" type="text/css" href="mobile.css">
+</head>
+<body>
+	<div id="topBar">Hangout - chat with friends</div>
+	<div id="tabBar" class="xScrollPane"><noscript>Javascript required</noscript></div>
+	<div id="listPane" class="yScrollPane"><noscript>Javascript required</noscript></div>
+	<div id="container"><div id='mediaContainer'></div><div id='chatContainer' class='yScrollablePane'></div><textarea rows="1" cols="80" id='msgBox' onkeypress='handleKeyPress(event,this.form)' ></textarea><a href='javascript:ui.chatManager.sendMsg();' class='button'><div class='SendButton'>GO</div></a></div>
+	<script src="https://www.ssl-id.de/hangout.f-online.net/engine/chat.js"></script>
+	<script src="https://www.ssl-id.de/hangout.f-online.net/engine/videocall.js"></script>
+	<script src="https://www.ssl-id.de/hangout.f-online.net/engine/voicecall.js"></script>
+	<script src="https://www.ssl-id.de/hangout.f-online.net/engine/uimanager.js"></script>
+</body>
+</html>

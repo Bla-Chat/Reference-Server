@@ -1,4 +1,4 @@
-var subtract = 120;
+var subtract = 140;
 var lineHeight = 90;
 if (window.mobilecheck != false) {
 	subtract = 100;
@@ -8,6 +8,20 @@ if (window.mobilecheck != false) {
 	window.scroll = function () { 
        window.scrollTo(0,0); 
 	};
+}
+
+document.head = document.head || document.getElementsByTagName('head')[0];
+
+function changeFavicon(src) {
+ var link = document.createElement('link'),
+     oldLink = document.getElementById('dynamic-favicon');
+ link.id = 'dynamic-favicon';
+ link.rel = 'shortcut icon';
+ link.href = src;
+ if (oldLink) {
+  document.head.removeChild(oldLink);
+ }
+ document.head.appendChild(link);
 }
 
 function moreMessages() {
@@ -57,7 +71,7 @@ function contactListToHTML(contacts) {
 		if (contacts[i].status == "1") {
 			state = "dcontactbuttonOnline";
 		}
-		out = out + "<a class='button' href='javascript:ui.contact(\""+contacts[i].nick + "\",\"" + contacts[i].name + "\");'><div class='"+state+"'><img class='profile3' src='https://www.ssl-id.de/bla.f-online.net/api/imgs/profile_"+contacts[i].nick+".png' />" + contacts[i].name + marker + "</div></a>";
+		out = out + "<a class='button' href='javascript:ui.contact(\""+contacts[i].nick + "\",\"" + contacts[i].name + "\");'><div class='"+state+"'><img class='profile3' src='https://www.ssl-id.de/bla.f-online.net/api/imgs/profile_"+contacts[i].nick+".png' onerror=\"this.src='https://www.ssl-id.de/bla.f-online.net/api/imgs/user.png';\" />" + contacts[i].name + marker + "</div></a>";
 	}
 	return out;
 }
@@ -104,17 +118,19 @@ var totalMarks = 0;
 
 function mark(list, nick) {
 	for (var i = 0; i < list.length; i++) {
-		if (list[i].nick == nick && (ui.chatManager.chat == null || ui.chatManager.chat.nick != nick)) {
+		if (list[i].nick == nick && (ui.chatManager.chat == null || ui.chatManager.chat.nick != nick || ui.isForeground == false)) {
 			if (list[i].marked != true) {
 				totalMarks++;
 			}
 			list[i].marked = true;
 		}
 	}
-	if (totalMarks > 0 || hasFocus == false) {
+	if (totalMarks > 0 || ui.isForeground == false) {
 		window.document.title = "Bla chat *";
+		changeFavicon('notified.png');
 	} else {
 		window.document.title = "Bla chat";
+		changeFavicon('normal.png');
 	}
 }
 
@@ -130,8 +146,10 @@ function unmark(list, nick) {
 	}
 	if (totalMarks > 0) {
 		window.document.title = "Bla chat *";
+		changeFavicon('notified.png');
 	} else {
 		window.document.title = "Bla chat";
+		changeFavicon('normal.png');
 	}
 }
 
@@ -171,6 +189,7 @@ function sendViaGet(object, callback) {
     xmlhttp.onreadystatechange = function() {
     	if (xmlhttp.readyState==4 && xmlhttp.status==200) {
     		if (xmlhttp.responseText != "") {
+			console.log(xmlhttp.responseText);
         		var inobject = JSON.parse(xmlhttp.responseText);
         		callback(inobject, xmlhttp.responseText);
         	} else {
@@ -227,7 +246,21 @@ var hasFocus = true;
             hasFocus = this[hidden] ? false : true;
             
         if (totalMarks < 1 || hasFocus == false) {
-			window.document.title = "Hangout";
+			window.document.title = "Bla chat";
+		changeFavicon('normal.png');
 		}
     }
 })();
+
+function playSound() {
+ document.getElementById("notifications").play();
+}
+
+function startRing() {
+ document.getElementById("calls").play();
+}
+
+function stopRing() {
+ document.getElementById("calls").pause();
+ document.getElementById("calls").currentTime = 0;
+}

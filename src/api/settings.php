@@ -6,4 +6,5 @@
 	$database = 'YourSQLDatabase';
 	$username = 'YourSQLUsername';
 	$password = 'YourSQLPassword';
+	$welcomeMessage = "Your welcome message!";
 ?>

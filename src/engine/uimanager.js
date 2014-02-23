@@ -1,6 +1,14 @@
 var ui = new UI();
 ui.init();
 
+window.onfocus = function () {
+  ui.isForeground = true;
+}; 
+
+window.onblur = function () { 
+  ui.isForeground = false; 
+}; 
+
 function UI () {
 	if (window.location.protocol != 'https:') {
 		window.location.protocol = 'https:';
@@ -15,6 +23,8 @@ function UI () {
 	this.user = "unauthorized";
 	this.username = "none";
 	this.chatVisible = true;
+	this.videoVisible = false;
+	this.isForeground = true;
 	
 	// Make the contianers accessable
 	this.container = getComponent("chatContainer");
@@ -89,6 +99,7 @@ function UI () {
 		that.updateChats();
 		that.updateContacts();
 		getComponent("chatContainer").scrollTop = getComponent("chatContainer").scrollHeight;
+		that.resize();
 	};
 	
 	this.contact = function (partner, name) {
@@ -113,12 +124,13 @@ function UI () {
 				scroll = true;
 			getComponent("listPane").style.height = (window.innerHeight-subtract)+"px";
 			getComponent("container").style.height = (window.innerHeight-subtract)+"px";
-			if (that.chatVisible == true) {
+			if (that.videoVisible == false) {
 				that.container.style.height = (window.innerHeight-subtract-lineHeight)+"px";
 				that.mediaContainer.style.display = "none";
 			} else {
-				that.mediaContainer.style.height = (window.innerHeight-subtract-lineHeight)+"px";
-				that.container.style.display = "none";
+				that.container.style.height = (window.innerHeight-subtract-lineHeight)+"px";
+				that.mediaContainer.style.height = 0+"px";
+				that.mediaContainer.style.display = "block";
 			}
 			if (scroll == true)
 				getComponent("chatContainer").scrollTop = getComponent("chatContainer").scrollHeight;

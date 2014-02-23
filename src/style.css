@@ -1,15 +1,87 @@
+body {
+	background: rgb(255,255,255);
+}
+
 textarea {
 	width: 80%;
 }
 
-video {
-	max-width: 100%;
-	min-width: 100%;
+.incomingCallOverlay {
+	position:absolute;
+	width:150px;
+	height:75px;
+	background: rgba(0,0,0,0.5);
+	padding: 10px;
+	z-index: 15;
+	display:none;
+}
+.outgoingCallOverlay {
+	position:absolute;
+	width:150px;
+	height:75px;
+	background: rgba(0,0,0,0.5);
+	padding: 10px;
+	z-index: 15;
+	display:none;
+}
+.audioOverlay {
+	position:absolute;
+	width:150px;
+	height:75px;
+	background: rgba(0,0,0,0.5);
+	padding: 10px;
+	z-index: 5;
+	display:none;
+}
+
+.videoOverlay {
+	
+	position:absolute;
+	margin-left: 40px;
+	width:70%;
+	height:70%;
+	background: rgba(0,0,0,0.5);
+	padding: 10px;
+	z-index: 5;
+	display:none;
+}
+
+.ownVideo {
+	position:absolute;
+	width: 10%;
+	height: auto;
+	z-index: 10;
+}
+.otherVideo {
+	position:absolute;
+	width: 100%;
+	height: auto;
+	z-index: 6;
 }
 
 img {
 	max-width: 100%;
 	min-width: 100%;
+}
+
+.thumb {
+    display: inline-block;
+    width: 500px;
+    height: 300px;
+    margin: 1px;
+    border: 1px solid #333;
+    background-position: center center;
+    background-size: cover;
+}
+
+.welcome {
+   margin: 20px;
+   font-size: 2em;
+}
+
+.welcomeBody {
+   margin: 20px;
+   font-size: 1.2em;
 }
 
 .yScrollPane {
@@ -29,6 +101,14 @@ img {
 
 .staticPane {
 	overflow: hidden;
+}
+
+.agreement {
+	max-width: 600px;
+	margin: 10px;
+	padding: 15px;
+	color:rgb(30,30,30);
+	background: rgb(240,240,240);
 }
 
 .button {
@@ -133,6 +213,25 @@ img {
 	margin-top: -8px;
 	margin-right: -8px;
 }
+
+#invite {
+	float: right;
+	font-size: 1.0em;
+	margin: 1px;
+	margin-top: -10px;
+	margin-right: -10px;
+	padding: 6px;
+	color:rgb(30,30,30);
+	background: rgb(232,232,232);
+	text-decoration: none;
+}
+
+#invite:hover {
+	color:rgb(30,30,30);
+	background: rgb(245,245,245);
+	text-decoration: none;
+}
+
 #tabBar {
 	color:rgb(30,30,30);
 	background: rgb(250,250,250);

@@ -29,6 +29,7 @@
 	class ChatObject {
 		public $nick = "error";
 		public $name = "error";
+		public $time = "1900-01-01";
 	}
 	class ContactObject {
 		public $nick = "error";
@@ -71,7 +72,7 @@
 	$out->msg = "Cannot connect to SQL!";
 	@mysql_connect($server, $username, $password) or die (json_encode($out));
 	$out->msg = "Cannot select DB!";
-    @mysql_select_db($database) or die (json_encode($out));
+    	@mysql_select_db($database) or die (json_encode($out));
 	$out->msg = "Invalid operation!";
 	
 	mysql_set_charset("UTF8");
@@ -79,27 +80,31 @@
 	function authentificate($obj) {
 		$query = 'SELECT `Salt` FROM `users` WHERE `Nick`="'.htmlspecialchars($obj->user).'";';
 		$result = mysql_query($query);
-    	$num = mysql_num_rows($result);
-    	if ($num != 1) {
-        	$returnValue = new Message;
-        	$returnValue->type = "onRejected";
-        	$returnValue->msg = $obj;
-        	return $returnValue;
-    	}
+    		$num = mysql_num_rows($result);
+    		if ($num != 1) {
+        		$returnValue = new Message;
+        		$returnValue->type = "onRejected";
+        		$returnValue->msg = $obj;
+        		return $returnValue;
+    		}
 		$salt = mysql_result($result,0,"Salt");
 		$pw = md5($obj->password.$salt);
 		
 		$query = 'SELECT `Nick` FROM `users` WHERE `Nick`="'.htmlspecialchars($obj->user).'" AND `Password`="'.$pw.'";';
-    	$result = mysql_query($query);
-    	$num = mysql_num_rows($result);
+    		$result = mysql_query($query);
+    		$num = mysql_num_rows($result);
     	
-    	if ($num != 1) {
-        	$returnValue = new Message;
-        	$returnValue->type = "onRejected";
-        	$returnValue->msg = $obj;
-        	return $returnValue;
-    	}
-    	return null;
+    		if ($num != 1) {
+        		$returnValue = new Message;
+        		$returnValue->type = "onRejected";
+        		$returnValue->msg = $obj;
+        		return $returnValue;
+    		}
+		$query = 'UPDATE `clients` SET `Timestamp`=CURRENT_TIMESTAMP WHERE `ClientID`="'.htmlspecialchars($obj->id).'";';
+		mysql_query($query);
+
+		cleanUpDB();
+    		return null;
 	}
 	
 	function login ($obj) {
@@ -148,8 +153,8 @@
 		$returnValue = authentificate($obj);
 		if ($returnValue == null) {
 			$returnValue = new Message;
-			$query = 'SELECT * FROM `conversations` WHERE `Member`="'.htmlspecialchars($obj->user).'" order by `LocalName`;'; // Add order by last activity.
-			$result = mysql_query($query);
+			$query = 'SELECT Nick, LocalName, MAX(`Time`) FROM `conversations`, `messages` WHERE `Receiver`=`Nick` AND `Member`="'.htmlspecialchars($obj->user).'" group by Nick order by MAX(`Time`) desc;';
+			$result = mysql_query($query); 
     		$returnValue->type = "onGetChats";
     		$returnValue->msg = array();
     		$i = 0;
@@ -157,6 +162,7 @@
                 $conversation = new ChatObject;
                 $conversation->nick = $line['Nick'];
                 $conversation->name = $line['LocalName'];
+                $conversation->time = $line['MAX(`Time`)'];
     			$returnValue->msg[$i] = $conversation;
     			$i++;
     		}
@@ -189,9 +195,15 @@
 		$returnValue = authentificate($obj);
 		if ($returnValue == null) {
 			$returnValue = new MessageE;
-			$count = 30;
+			$count = 60;
 			if (isset($obj->count)) {
 				$count = htmlspecialchars($obj->count);
+			}
+			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.htmlspecialchars($obj->conversation).'" AND `Member`="'.htmlspecialchars($obj->user).'"';
+			$result = mysql_query($query);
+    		$num = mysql_num_rows($result);
+    		if ($num < 1) {
+				return $returnValue;
 			}
 			$query = 'SELECT `RealName`, `Time`, `Author`, `Message` FROM `users`, `messages` WHERE `Author`=`Nick` AND `Receiver`="'.htmlspecialchars($obj->conversation).'" order by Time desc limit '.$count.';';
 			$result = mysql_query($query);
@@ -236,6 +248,33 @@
     		$result = mysql_query($query);
     		while ($line = mysql_fetch_assoc($result)) {
     			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.$line['ClientID'].'","onMessage","'.htmlspecialchars($obj->conversation).'", "'.htmlspecialchars($obj->user).'", "'.htmlspecialchars($obj->message).'");';
+    			mysql_query($query);
+    		}
+    		$returnValue->type = "onMessage";
+    		$returnValue->msg = "success";
+		}
+		return $returnValue;
+	}
+
+	function blaCall($obj) {
+		$returnValue = authentificate($obj);
+		if ($returnValue == null) {
+			$returnValue = new Message;
+			// Check if conversation exists
+			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.htmlspecialchars($obj->conversation).'" AND `Member`="'.htmlspecialchars($obj->user).'";';
+			$result = mysql_query($query);
+    		$num = mysql_num_rows($result);
+    		if ($num != 1) {
+    			$returnValue->type = "onError";
+    			$returnValue->msg = "The requested conversation '".$obj->conversation."' does not exist!";
+    			return $returnValue;
+    		}
+
+    		cleanUpDB();
+		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.htmlspecialchars($obj->conversation).'" AND `Member`=clients.Nick AND NOT clients.Nick="'.htmlspecialchars($obj->user).'";';
+    		$result = mysql_query($query);
+    		while ($line = mysql_fetch_assoc($result)) {
+    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.$line['ClientID'].'","onBlaCall","'.htmlspecialchars($obj->conversation).'", "'.htmlspecialchars($obj->user).'", "'.htmlspecialchars(json_encode($obj->message)).'");';
     			mysql_query($query);
     		}
     		$returnValue->type = "onMessage";
@@ -349,8 +388,10 @@
 			$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND clients.Nick="'.htmlspecialchars($obj->user).'" AND conversations.Nick="'.htmlspecialchars($obj->conversation).'";';
     		$result = mysql_query($query);
     		while ($line = mysql_fetch_assoc($result)) {
-    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onMessageHandled","'.htmlspecialchars($obj->conversation).'", "'.htmlspecialchars($obj->user).'");';
+			$query = 'DELETE FROM `events` WHERE `ClientID`="'.$line['ClientID'].' AND `Message`="'.htmlspecialchars($obj->conversation).'";';
     			mysql_query($query);
+    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onMessageHandled","'.htmlspecialchars($obj->conversation).'", "'.htmlspecialchars($obj->user).'");';
+			mysql_query($query);
     		}
     		$returnValue->type = "onRemoveEvent";
     		$returnValue->msg = "success";
@@ -385,7 +426,7 @@
 				$event->type = $line['Type'];
 				$event->msg = $line['Message'];
 				$event->nick = $line['Trigger'];
-				$event->text = $line['Text'];
+				$event->text = htmlspecialchars_decode($line['Text']);
 				$returnValue->msg[$i] = $event;
 				$i++;
 			}
@@ -544,6 +585,8 @@
 			$out = getChatHistory($message->msg);
 		} else if ($message->type == "onMessage") {
 			$out = send($message->msg);
+		} else if ($message->type == "onBlaCall") {
+			$out = blaCall($message->msg);
 		} else if ($message->type == "onEvent") {
 			$out = pollEvents($message->msg);
 		} else if ($message->type == 'onRemoveEvent') {

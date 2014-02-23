@@ -23,15 +23,15 @@ function Chat(nick, name) {
 			out = out + "<BR><a class='button' href='javascript:moreMessages();'><div class='dbutton'>more messages</div></a> <a class='button' href='javascript:lessMessages();'><div class='dbutton'>less messages</div></a><BR><BR>";
 			for (var i = messages.length-1; i >= 0; i = i -1) {
 				if (messages[i].authorNick == ui.user) {
-					out = out + "<div class='messageWrapper' align='right'><img class='profile2' src='https://www.ssl-id.de/bla.f-online.net/api/imgs/profile_"+messages[i].authorNick+".png' /><div class='messageYou' align='left'>";
+					out = out + "<div class='messageWrapper' align='right'><img class='profile2' src='https://www.ssl-id.de/bla.f-online.net/api/imgs/profile_"+messages[i].authorNick+".png' onerror=\"this.src='https://www.ssl-id.de/bla.f-online.net/api/imgs/user.png';\" /><div class='messageYou' align='left'>";
 				} else {
-					out = out + "<div class='messageWrapper' align='left'><img class='profile' src='https://www.ssl-id.de/bla.f-online.net/api/imgs/profile_"+messages[i].authorNick+".png' /><div class='messageOther' align='left'>";
+					out = out + "<div class='messageWrapper' align='left'><img class='profile' src='https://www.ssl-id.de/bla.f-online.net/api/imgs/profile_"+messages[i].authorNick+".png' onerror=\"this.src='https://www.ssl-id.de/bla.f-online.net/api/imgs/user.png';\" /><div class='messageOther' align='left'>";
 				}
 				var message = messages[i].message;
 				var parts = message.split(" ");
 				var outMsg = "";
 				if (message.indexOf("#image") == 0) {
-					outMsg = outMsg + "<a href='"+parts[1]+"'><img src='"+parts[1]+"' /></a>";
+					outMsg = outMsg + "<a target='_blank' href='"+parts[1]+"'><div class='thumb' style='background-image:url(\""+parts[1]+"\");'></div></a>";
 				} else if (message.indexOf("#video") == 0) {
 					var videoTag = "<video src='" + parts[1] + "' />";
 					if (window.mobilecheck != false) {
@@ -62,7 +62,7 @@ function Chat(nick, name) {
 		}
 		getComponent("listPane").style.height = (window.innerHeight-subtract)+"px";
 		getComponent("container").style.height = (window.innerHeight-subtract)+"px";
-		getComponent("chatContainer").style.height = (window.innerHeight-subtract-lineHeight)+"px";
+		ui.resize();
 		if (scroll == true) {
 			window.setTimeout("scrollBottom()", 200);
 			getComponent("chatContainer").scrollTop = getComponent("chatContainer").scrollHeight;
@@ -71,11 +71,12 @@ function Chat(nick, name) {
 }
 
 function scrollBottom() {
-	console.log("Scrolled to bottom of page");
 	getComponent("chatContainer").scrollTop = getComponent("chatContainer").scrollHeight;
 };
 
 function ChatManager() {
+	this.videoManager = null;
+	this.audioManager = null;
 	var that = this;
 	var clientID = null;
 	var chats = [];
@@ -113,11 +114,14 @@ function ChatManager() {
 		send({'type':'onGetContacts','msg':{'user':ui.user, 'password':pw}},onIncoming);
 		send({'type':'onGetChats','msg':{'user':ui.user, 'password':pw}},onIncoming);
 		window.setTimeout("ui.chatManager.eventTrigger()", 1000);
+		that.videoManager = new VideoCall(pw);
+		that.audioManager = new AudioCall(pw);
 	}
 
 	function onIncoming(object, msg) {
 		if (object == null) {
-			alert("Unknown Error!");
+			console.log("Unknown Error!");
+			location.reload();
 		} else if (object.type == "onRejected") {
 			localStorage.user = null;
 			alert("Login failed! Username and password incorrect!");
@@ -125,7 +129,7 @@ function ChatManager() {
 		} else if (object.type == "onConnect") {
 			ui.isConnected = true;
 			ui.username = object.msg;
-			ui.container.innerHTML = "Welcome " + object.msg + "!";
+			ui.container.innerHTML = "<div class='welcome'>Hi " + object.msg + ",</div><div class='welcomeBody'>"+welcomeMessage+"<BR>Greetings<BR><BR>Your Host</div>";
 			if (clientID != null && clientID != "null") {
 				initialize();
 			} else {
@@ -150,21 +154,24 @@ function ChatManager() {
 			}
 		} else if (object.type == "onMessage") {
 			that.chat.update();
-			console.log("onMessage");
 		} else if (object.type == "onMessageHandled") {
 			that.chat.update();
 			ui.unmarkAll();
 		} else if (object.type == "onConversation") {
 		
-		} else if (object.type == "onEvent") {
+		} else if (object.type == "onEvent") {			
+			if (ui.isConnected) {
+				window.setTimeout("ui.chatManager.eventTrigger()", 1000);
+			}
 			for (var i = 0; i < object.msg.length; i++) {
 				var e = object.msg[i];
 				ui.unmarkAll();
 				if (e.type == "onMessage") {
-					if (e.nick != ui.user) {
-						ui.notifyContact(e.msg);
-					} else {
+					playSound();
+					if (ui.chatManager.chat && e.nick == ui.chatManager.chat.nick && ui.isForeground) {
 						that.consumeEvent(e);
+					} else {
+						ui.notifyContact(e.msg);
 					}
 					// Also retrieve if chat not active.
 					that.chatUpdate(e.msg);
@@ -175,24 +182,33 @@ function ChatManager() {
 				} else if (e.type == "onMessageHandled") {
 					ui.unmarkChat(e.msg);
 					that.chatUpdate(e.msg);
+				} else if (e.type == "onBlaCall") {
+					that.audioManager.onmessage(e, e.msg);
+					that.videoManager.onmessage(e, e.msg);
 				} else {
-					alert(e.type + "->" + JSON.stringify(e.msg));
+					console.log(e.type + "->" + JSON.stringify(e.msg));
 				}
 			}
-			if (ui.isConnected) {
-				window.setTimeout("ui.chatManager.eventTrigger()", 1000);
-			}
-			console.log("event: "+JSON.stringify(object)+":"+msg);
 		} else if (object.type == "onRemoveEvent") {
 			// Nothing to do here?!
 			console.log("remove: "+JSON.stringify(object)+":"+msg);
 		} else if (object.type == "onError") {
-			alert("ERROR! " + object.msg);
+			console.log("ERROR! " + object.msg);
+			location.reload();
 		} else {
 			console.log("Unknown object received: "+JSON.stringify(object));
 		}
 	};
 		
+	this.acceptCall = function() {
+		that.audioManager.acceptCall();
+		that.videoManager.acceptCall();
+	};
+	this.declineCall = function() {
+		that.audioManager.declineCall();
+		that.videoManager.declineCall();
+	};
+
 	this.chatUpdate = function(nick) {
 		send({'type':'onGetHistory','msg':{'user':ui.user, 'password':pw, 'conversation':nick, 'count':that.count}},onIncoming);
 	};
@@ -219,6 +235,7 @@ function ChatManager() {
 			that.chat.setMessages(that.chat.getMessages());
 		}
 		that.chat.update();
+		that.consumeEvent({"nick":ui.chatManager.chat.nick});
 		getComponent("chatContainer").scrollTop = getComponent("chatContainer").scrollHeight+200;
 		send({'type':'onRemoveEvent','msg':{'user':ui.user, 'password':pw, 'id':clientID,'message':ui.chatManager.chat.nick,'type':'onMessage'}},onIncoming);
 	};
@@ -239,6 +256,8 @@ function ChatManager() {
 		if (message != "") {
 			send({'type':'onMessage','msg':{'user':ui.user, 'password':pw,'conversation':ui.chatManager.chat.nick,'message':message}},onIncoming);
 		}
+		ui.unmarkChat(ui.chatManager.chat.nick);
+		that.consumeEvent({"nick":ui.chatManager.chat.nick});
 		window.setTimeout("msgBox.value = ''", 100);
 	};
 	

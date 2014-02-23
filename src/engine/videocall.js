@@ -1,34 +1,200 @@
-function VideoCall(nick) {
+String.prototype.replaceAll = function (find, replace) {
+    var str = this;
+    return str.replace(new RegExp(find.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), 'g'), replace);
+};
+
+function VideoCall(password) {
 	var that = this;
-	var frame = null;
-	var participants = [];
-	
-	this.nick = nick;
-	
-	this.start = function () {
-		frame = ui.mediaContainer;
+	var parentChat = null;
+        var pw = password;
+	var remotestream;
+	var localstream;
+	var statusIsCaller;
+	var accepted = false;
+
+	var pc;
+
+var isChrome = !!navigator.webkitGetUserMedia;
+
+var STUN = {
+    url: isChrome 
+       ? 'stun:stun.l.google.com:19302' 
+       : 'stun:23.21.150.121'
+};
+var PRIVATE_STUN = {
+    url: 'stun:www.pick-your-axe.de:19302'
+};
+
+var iceServers = {
+   iceServers: [STUN]
+};
+
+// DTLS/SRTP is preferred on chrome
+// to interop with Firefox
+// which supports them by default
+
+var DtlsSrtpKeyAgreement = {
+   DtlsSrtpKeyAgreement: true
+};
+
+var optional = {
+   optional: [DtlsSrtpKeyAgreement]
+};
+
+	btn2.disabled = false;
+	btn3.disabled = true;
+
+	this.send = function (data) {
+	    if ( parentChat == null && ui.chatManager.chat ) {
+		parentChat = ui.chatManager.chat.nick;
+	    }
+	    if( parentChat ) {
+		data.video = true;
+	    	console.log("Address: "+JSON.stringify(parentChat));
+		var stringified = JSON.stringify(data);
+		stringified = stringified.replaceAll('\\r\\n','#r#n');
+		data = JSON.parse(stringified);
+	        send({'type':'onBlaCall','msg':{'user':ui.user, 'password':pw,'conversation':parentChat,'message':data}},function() {});
+	    }
 	};
-	this.add = function (newParticipants) {
-		for (var i = 0; i < newParticipants.length; i++) {
-			participants[participants.length+i] = newParticipants[i];
+
+	// run start(true) to initiate a call
+	this.start = function(isCaller) {
+	  if( parentChat == null && ui.chatManager.chat == null) { return; }
+          statusIsCaller = isCaller;
+	  btn3.disabled = false;
+	  btn2.disabled = true;
+	  btn5.disabled = true;
+	  btn4.disabled = true;
+
+	  ui.videoVisible = true;
+	  ui.resize();
+	  if (isCaller != false) {
+		accepted = true;
+	  	getComponent("outgoingCallOverlay").style.display = "block";
+		startRing();
+	  }
+
+	    pc = new RTCPeerConnection(iceServers, optional);
+	
+	    // send any ice candidates to the other peer
+	    pc.onicecandidate = function (evt) {
+		if (pc && evt.candidate) {
+			if (remotestream) {
+				window.setTimeout(function() {if (pc) that.send({ "candidate": evt.candidate });}, 2000);
+	        		
+			} else {
+				window.setTimeout(function() {if (pc) pc.onicecandidate(evt);}, 200);
+			}
 		}
-		that.updateUI();
+	    };
+	
+	    // once remote stream arrives, show it in the remote video element
+	    pc.onaddstream = function (evt) {
+	  	getComponent("outgoingCallOverlay").style.display = "none";
+		stopRing();
+	  	getComponent("videoOverlay").style.display = "block";
+		remotestream = evt.stream;
+	        vid2.src = URL.createObjectURL(evt.stream);
+	    };
+	
+	    // get the local stream, show it in the local video element and send it
+	    getUserMedia({ "audio": true, "video": true }, function (stream) {
+	        vid1.src = URL.createObjectURL(stream);
+		if (!pc) {stream.close;console.log("Critical Error"); return;}
+	        pc.addStream(stream);
+		localstream = stream;
+		
+	        if (isCaller)
+	            pc.createOffer(function(desc) {
+	            pc.setLocalDescription(desc);
+	            that.send({ "sdp": desc });
+	        });	            
+	    });
 	};
-	this.remove = function (oldParticipants) {
-		for (var i = 0; i < oldParticipants.length; i++) {
-			for (var j = 0; j < participants.length; j++) {
-				if (participants[j].nick == oldParticipants[i].nick) {
-					participants = removeFromArray(participants, j);
-					break;
+	
+	this.onmessage = function (evt, chat) {
+	    evt.text = evt.text.replaceAll('#r#n','\\r\\n');
+	    var signal = JSON.parse(evt.text);
+
+	    if (!signal.video) return;
+	    
+	    if (!signal.sdp && !signal.candidate) {
+	    	that.stop();
+		return;
+	    }
+
+	    parentChat = chat;
+	    if (!pc)
+	        that.start(false);
+
+	    if (signal.sdp) {
+		if (!statusIsCaller) {
+	  		getComponent("incomingCallOverlay").style.display = "block";
+			startRing();
+		}
+		function func() {
+			if (pc && localstream && accepted == true) {
+			    console.log("Final video accept");
+			    pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+			    if (!statusIsCaller) {
+				pc.createAnswer(function(desc) {
+		        	    pc.setLocalDescription(desc);
+		        	    that.send({ "sdp": desc });
+		        	});
+			    }
+			} else {
+				if (pc) {
+					window.setTimeout(func, 200);
 				}
 			}
 		}
-		that.updateUI;
+	        window.setTimeout(func,200);
+	    } else if (signal.candidate) {
+	        pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+            } else {
+		console.log("This is an error.");
+	    }
 	};
-	this.stop = function () {
-		frame = null;
+
+	this.acceptCall = function() {
+		if (pc) {
+			stopRing();
+			accepted = true;
+	  		getComponent("incomingCallOverlay").style.display = "none";
+		}
 	};
-	this.updateUI = function () {
-		// TODO
+	this.declineCall = function() {
+		if (pc) {
+			stopRing();
+			accepted = false;
+			that.stop();
+		}
 	};
+
+	this.stop = function() {
+	  getComponent("videoOverlay").style.display = "none";
+	  getComponent("incomingCallOverlay").style.display = "none";
+	  getComponent("outgoingCallOverlay").style.display = "none";
+	  if (pc) {
+	    that.send({ "close": "closing" });
+	    pc.close(); 
+	    pc = null;
+	    if (localstream) {
+	    	localstream.stop();
+	    	localstream = null;
+	    }
+            remotestream = null;
+	    parent = null;
+	  } else {
+		console.log("Cannot close videostream.");
+	  }
+	  accepted = false;
+	  btn5.disabled = true;
+	  btn4.disabled = false;
+	  btn3.disabled = true;
+	  btn2.disabled = false;
+	  ui.videoVisible = false;
+	  ui.resize();
+	}
 }
