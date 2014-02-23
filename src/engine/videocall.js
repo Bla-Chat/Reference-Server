@@ -41,9 +41,6 @@ var optional = {
    optional: [DtlsSrtpKeyAgreement]
 };
 
-	btn2.disabled = false;
-	btn3.disabled = true;
-
 	this.send = function (data) {
 	    if ( parentChat == null && ui.chatManager.chat ) {
 		parentChat = ui.chatManager.chat.nick;
@@ -62,11 +59,9 @@ var optional = {
 	this.start = function(isCaller) {
 	  if( parentChat == null && ui.chatManager.chat == null) { return; }
           statusIsCaller = isCaller;
-	  btn3.disabled = false;
-	  btn2.disabled = true;
-	  btn5.disabled = true;
-	  btn4.disabled = true;
 
+	  getComponent("OpenCallOverlay").style.display = "none";
+	  getComponent("ExitCallOverlay").style.display = "inline-block";
 	  ui.videoVisible = true;
 	  ui.resize();
 	  if (isCaller != false) {
@@ -174,6 +169,8 @@ var optional = {
 
 	this.stop = function() {
 	  getComponent("videoOverlay").style.display = "none";
+	  getComponent("OpenCallOverlay").style.display = "inline-block";
+	  getComponent("ExitCallOverlay").style.display = "none";
 	  getComponent("incomingCallOverlay").style.display = "none";
 	  getComponent("outgoingCallOverlay").style.display = "none";
 	  if (pc) {
@@ -190,10 +187,6 @@ var optional = {
 		console.log("Cannot close videostream.");
 	  }
 	  accepted = false;
-	  btn5.disabled = true;
-	  btn4.disabled = false;
-	  btn3.disabled = true;
-	  btn2.disabled = false;
 	  ui.videoVisible = false;
 	  ui.resize();
 	}

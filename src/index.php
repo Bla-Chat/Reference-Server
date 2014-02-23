@@ -24,28 +24,31 @@ echo '		<link rel="stylesheet" type="text/css" href="'.$serverAddress.'/style.cs
 				<source src="call.mp3" type="audio/mpeg">
 				<source src="call.ogg" type="audio/ogg">
 			</audio>
-			<b>Peer: </b>
-			<button id="btn2" onclick="ui.chatManager.videoManager.start(true)">Peer</button>
-			<button id="btn3" onclick="ui.chatManager.videoManager.stop()">Get lost</button>
-			<b>Babble: </b>
-			<button id="btn4" onclick="ui.chatManager.audioManager.start(true)">Babble</button>
-			<button id="btn5" onclick="ui.chatManager.audioManager.stop()">Get lost</button>
+			<div id="OpenCallOverlay">
+			<a href="javascript:ui.chatManager.audioManager.start(true);"><img id="audioCall" class="tinyImg" src="images/Call.png" alt="Audio Call" /></a>
+			<a href="javascript:ui.chatManager.videoManager.start(true);"><img id="videoCall" class="tinyImg" src="images/Video.png" alt="Video Call" /></a>
+			</div>
+			<div id="ExitCallOverlay">
+			<a href="javascript:ui.chatManager.declineCall();"><img id="exitCall" class="tinyImg" src="images/Exit.png" alt="Exit Call" /></a>
+			</div>
 			<i>(Chrome only)</i>
 			<div id="incomingCallOverlay" class="incomingCallOverlay" align="center">
-				<button id="accept" onclick="ui.chatManager.acceptCall()">Yay</button>
-				<button id="decline" onclick="ui.chatManager.declineCall()">Get lost</button>
+				<a href="javascript:ui.chatManager.acceptCall();"><img id="acceptCall" class="tinyImg" src="images/Call.png" alt="Accept Call" /></a>
+				<a href="javascript:ui.chatManager.declineCall();"><img id="exitCall" class="tinyImg" src="images/Exit.png" alt="Decline Call" /></a>
 			</div>
 			<div id="outgoingCallOverlay" class="outgoingCallOverlay" align="center">
-				<button id="cancel" onclick="ui.chatManager.declineCall()">Nevermind</button>
+				<a href="javascript:ui.chatManager.declineCall();"><img id="cancelCall" class="tinyImg" src="images/Exit.png" alt="Cancel" /></a>
 			</div>
 			<div id='mediaContainer'>
 				<div id="audioOverlay" class="audioOverlay" align="left">
 					<audio id="aud1" autoplay="true" muted="true"></audio>
 					<audio id="aud2" autoplay></audio>
+					<a href="javascript:ui.chatManager.declineCall();"><img id="exitCall" class="tinyImg" src="images/Exit.png" alt="Exit Call" /></a>
 				</div>
 				<div id="videoOverlay" class="videoOverlay" align="left">
 					<video class="otherVideo" id="vid2" autoplay ></video>
 					<video class="ownVideo" id="vid1" autoplay="true" muted="true"></video>
+					<a href="javascript:ui.chatManager.declineCall();"><img id="exitCall" class="tinyImg" src="images/Exit.png" alt="Exit Call" /></a>
 				</div>
 			</div>
 			<div id='chatContainer' class='yScrollablePane'></div>

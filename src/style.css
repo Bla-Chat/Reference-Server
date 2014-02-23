@@ -59,9 +59,22 @@ textarea {
 	z-index: 6;
 }
 
+#OpenCallOverlay {
+	display: inline-block;
+}
+
+#ExitCallOverlay {
+	display: none;
+}
+
 img {
 	max-width: 100%;
-	min-width: 100%;
+	//min-width: 100%;
+}
+
+.tinyImg {
+	max-width: 48px;
+	max-height: 48px;
 }
 
 .thumb {
