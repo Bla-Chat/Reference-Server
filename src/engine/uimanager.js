@@ -123,12 +123,12 @@ function UI () {
 			if (that.chatVisible == true && getComponent("chatContainer").scrollTop == getComponent("chatContainer").scrollHeight)
 				scroll = true;
 			getComponent("listPane").style.height = (window.innerHeight-subtract)+"px";
-			getComponent("container").style.height = (window.innerHeight-subtract)+"px";
+			getComponent("container").style.height = (window.innerHeight-subtract-45)+"px";
 			if (that.videoVisible == false) {
-				that.container.style.height = (window.innerHeight-subtract-lineHeight)+"px";
+				that.container.style.height = (window.innerHeight-subtract-lineHeight-45)+"px";
 				that.mediaContainer.style.display = "none";
 			} else {
-				that.container.style.height = (window.innerHeight-subtract-lineHeight)+"px";
+				that.container.style.height = (window.innerHeight-subtract-lineHeight-45)+"px";
 				that.mediaContainer.style.height = 0+"px";
 				that.mediaContainer.style.display = "block";
 			}

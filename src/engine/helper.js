@@ -1,4 +1,4 @@
-var subtract = 170;
+var subtract = 130;
 var lineHeight = 90;
 if (window.mobilecheck != false) {
 	subtract = 100;
