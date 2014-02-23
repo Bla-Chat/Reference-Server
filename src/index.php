@@ -31,7 +31,7 @@ echo '		<link rel="stylesheet" type="text/css" href="'.$serverAddress.'/style.cs
 			<div id="ExitCallOverlay">
 			<a href="javascript:ui.chatManager.declineCall();"><img id="exitCall" class="tinyImg" src="images/Exit.png" alt="Exit Call" /></a>
 			</div>
-			<i>(Chrome only)</i>
+			<i>(Chrome & Firefox only)</i>
 			<div id="incomingCallOverlay" class="incomingCallOverlay" align="center">
 				<a href="javascript:ui.chatManager.acceptCall();"><img id="acceptCall" class="tinyImg" src="images/Call.png" alt="Accept Call" /></a>
 				<a href="javascript:ui.chatManager.declineCall();"><img id="exitCall" class="tinyImg" src="images/Exit.png" alt="Decline Call" /></a>

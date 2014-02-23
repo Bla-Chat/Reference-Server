@@ -106,8 +106,8 @@ var optional = {
 	            pc.createOffer(function(desc) {
 	            pc.setLocalDescription(desc);
 	            that.send({ "sdp": desc });
-	        });	            
-	    });
+	        }, function() {console.log("Error"); that.stop();});	            
+	    }, function() {console.log("Error"); that.stop();});
 	};
 	
 	this.onmessage = function (evt, chat) {	
@@ -137,7 +137,7 @@ var optional = {
 				pc.createAnswer(function(desc) {
 		        	    pc.setLocalDescription(desc);
 		        	    that.send({ "sdp": desc });
-		        	});
+		        	}, function() {console.log("Error"); that.stop();});
 			    }
 			} else {
 				if (pc) {
