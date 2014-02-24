@@ -21,7 +21,7 @@ var STUN = {
        ? 'stun:stun.l.google.com:19302' 
        : 'stun:23.21.150.121'
 };
-var PRIVATE_STUN = {
+var ALLIED_STUN = {
     url: 'stun:www.pick-your-axe.de:19302'
 };
 

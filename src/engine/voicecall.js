@@ -21,14 +21,12 @@ var STUN = {
        ? 'stun:stun.l.google.com:19302' 
        : 'stun:23.21.150.121'
 };
-
-var TURN = {
-    url: 'turn:homeo@turn.bistri.com:80',
-    credential: 'homeo'
+var ALLIED_STUN = {
+    url: 'stun:www.pick-your-axe.de:19302'
 };
 
 var iceServers = {
-   iceServers: [STUN, TURN]
+   iceServers: [STUN]
 };
 
 // DTLS/SRTP is preferred on chrome
