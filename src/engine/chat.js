@@ -41,11 +41,11 @@ function Chat(nick, name) {
 				} else {
 					for (var j = 0; j < parts.length; j++) {
 						if (parts[j].search(/ftp:\/\/.+/) >= 0 || parts[j].search(/ftps:\/\/.+/) >= 0 || parts[j].search(/http:\/\/.+/) >= 0 || parts[j].search(/https:\/\/.+/) >= 0) {
-							parts[j] = "<a href='" + parts[j] + "'>" + parts[j] + "</a>";
+							parts[j] = "<a target='_blank' href='" + parts[j] + "'>" + parts[j] + "</a>";
 						} else if (parts[j].search(/.+@.+\..+/) >= 0) {
-							parts[j] = "<a href='mailto:" + parts[j] + "'>" + parts[j] + "</a>";
+							parts[j] = "<a target='_blank' href='mailto:" + parts[j] + "'>" + parts[j] + "</a>";
 						} else if (parts[j].search(/www\..+/) >= 0) {
-							parts[j] = "<a href='http://" + parts[j] + "'>" + parts[j] + "</a>";
+							parts[j] = "<a target='_blank' href='http://" + parts[j] + "'>" + parts[j] + "</a>";
 						}
 						outMsg = outMsg + parts[j] + " ";
 					}
@@ -168,6 +168,9 @@ function ChatManager() {
 				ui.unmarkAll();
 				if (e.type == "onMessage") {
 					playSound();
+					if (!ui.isForeground) {
+					    notify(e.msg, e.nick, e.text);
+					}
 					if (ui.chatManager.chat && e.nick == ui.chatManager.chat.nick && ui.isForeground) {
 						that.consumeEvent(e);
 					} else {

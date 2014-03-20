@@ -252,6 +252,48 @@ var hasFocus = true;
     }
 })();
 
+function notify(chat, header, msg) {
+  if (window.webkitNotifications) {
+    console.log("Trying to create a chrome notification.");
+    var havePermission = window.webkitNotifications.checkPermission();
+    if (havePermission == 0) {
+      // 0 is PERMISSION_ALLOWED
+      var notification = window.webkitNotifications.createNotification(
+        'notified.png',
+        header,
+        msg
+      );
+
+      notification.onclick = function () {
+	window.focus();
+	ui.chat(chat, chat);
+        notification.cancel();
+      }
+      notification.show();
+    } else {
+        console.log("No permission");
+    }
+  } else {
+     console.log("Trying to create a notification.");
+     if (Notification.permission === "granted") {
+        var notification = new Notification(header, {dir: "auto", body:msg, tag:1, icon:'notified.png'})
+        notification.onclick = function () {
+	   window.focus();
+	   ui.chat(chat, chat);
+           //window.open("https://www.ssl-id.de/bla.f-online.net/");
+           notification.close();
+        }
+     }
+  }
+}
+
+function enableNotification() {
+  if (window.webkitNotifications) {
+    window.webkitNotifications.requestPermission();
+  } else {
+     Notification.requestPermission(function (permission) {});
+  }
+}
 function playSound() {
  document.getElementById("notifications").play();
 }

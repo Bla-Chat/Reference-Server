@@ -3,10 +3,12 @@ ui.init();
 
 window.onfocus = function () {
   ui.isForeground = true;
+  console.log("onfocus");
 }; 
 
 window.onblur = function () { 
-  ui.isForeground = false; 
+  ui.isForeground = false;
+  console.log("onblur");
 }; 
 
 function UI () {

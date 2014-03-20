@@ -167,7 +167,7 @@ function validateForm()
 					$query = "INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ('$inviter','$nick');";
 					mysql_query($query);
 					
-					echo ("<div align='center'><BR>Continue here:<BR><BR><BR><div class='dbutton'><a class='button' href='".$serverAddress."'>PC/Tablet</a></div><BR><BR><BR><div class='dbutton'><a class='button' href='".$serverAddress."/mobile.html'>Non-Android Mobile</a></div><BR><BR><BR><div class='dbutton'><a class='button' href='".$serverAddress."/bla.apk'>Android (APK)</a></div><BR><BR> Have fun!</div>");
+					echo ("<div align='center'><BR>Continue here:<BR><BR><BR><div class='dbutton'><a class='button' href='".$serverAddress."'>PC/Tablet</a></div><BR><BR><BR><div class='dbutton'><a class='button' href='".$serverAddress."/mobile.html'>Non-Android Mobile</a></div><BR><BR><BR><div class='dbutton'><a class='button' href='https://raw.github.com/penguinmenac3/BlaChat/master/app/bla.apk'>Android (APK)</a></div><BR><BR> Have fun!</div>");
 				}
 				
 				// Delete invitation code
