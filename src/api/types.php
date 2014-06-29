@@ -50,6 +50,53 @@
 		public $text = "unspecified error";
 	}
 
+	function stripObject($obj) {
+		$out = new OutputMessageMini;
+		if ($obj->id != null) {
+			$out->id = $obj->id;
+		}
+		if ($obj->onLoginError != null) {
+			$out->onLoginError = $obj->onLoginError;
+		}
+		if ($obj->events != null) {
+			$out->events = $obj->events;
+		}
+		if ($obj->onGetChats != null) {
+			$out->onGetChats = $obj->onGetChats;
+		}
+		if ($obj->onGetContacts != null) {
+			$out->onGetContacts = $obj->onGetContacts;
+		}
+		if ($obj->onGetHistory != null) {
+			$out->onGetHistory = $obj->onGetHistory;
+		}
+		if ($obj->onMessage != null) {
+			$out->onMessage = $obj->onMessage;
+		}
+		if ($obj->onNewConversation != null) {
+			$out->onNewConversation = $obj->onNewConversation;
+		}
+		if ($obj->onRenameConversation != null) {
+			$out->onRenameConversation = $obj->onRenameConversation;
+		}
+		if ($obj->onAddFriend != null) {
+			$out->onAddFriend = $obj->onAddFriend;
+		}
+		if ($obj->onSetProfileImage != null) {
+			$out->onSetProfileImage = $obj->onSetProfileImage;
+		}
+		if ($obj->onSetGroupImage != null) {
+			$out->onSetGroupImage = $obj->onSetGroupImage;
+		}
+		if ($obj->onInjectEvent != null) {
+			$out->onInjectEvent = $obj->onInjectEvent;
+		}
+		if ($obj->onData != null) {
+			$out->onData = $obj->onData;
+		}
+		return $out;
+	}
+	
 	function compressObject($obj) {
 		$out = new OutputMessageMini;
 		if ($obj->id != null) {
@@ -119,8 +166,10 @@
 	}
 
 	function encodeObject($obj, $minify) {
-		if ($minify) {
+		if ($minify == true) {
 			$obj = compressObject($obj);
+		} else {
+			$obj = stripObject($obj);
 		}
 		return json_encode($obj);
 	}
@@ -142,9 +191,9 @@
 			$minified = true;
 		}
 	
-		$message = json_decode($version1);
+		$message = json_decode($preEncode);
 		
-		if ($minified) {
+		if ($minified == true) {
 			$message = decompressObject($message);
 		}
 		$message->minified = $minified;

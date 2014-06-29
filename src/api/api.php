@@ -1,20 +1,8 @@
 <?PHP
 	include "settings.php";
+	include "helpers.php";
 	
 	ini_set('display_errors', '1');
-    
-	function randomstring($length = 32) {
-		$chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-		srand((double)microtime()*1000000);
-		$i = 0;
-		while ($i < $length) {
-		$num = rand() % strlen($chars);
-		$tmp = substr($chars, $num, 1);
-		$pass = $pass . $tmp;
-		$i++;
-		}
-		return $pass;
-	}
 
 	class Message {
 		public $type = "onError";
@@ -49,24 +37,19 @@
 		mysql_query($query);
 		
 		// Set users offline
-		$query = 'SELECT users.Nick FROM `clients`, `users` WHERE NOT `Status`=0  AND users.Nick=clients.Nick AND `Timestamp` < (NOW() - INTERVAL 10 MINUTE);';
+		$query = 'SELECT users.Nick FROM `users` WHERE NOT `Status`=0;';
 		$result = mysql_query($query);
 		while ($lines = mysql_fetch_array($result)) {
-			$query = 'UPDATE `users` SET `Status`=0 WHERE `Nick`="'.mysql_real_escape_string($lines[0]).'";';
-    		mysql_query($query);
-    		
-			$query = 'SELECT `Nick` FROM `contacts` WHERE `Friend`="'.mysql_real_escape_string($lines[0]).'";';
-			$result = mysql_query($query);
+			$query = 'SELECT Nick, ClientID FROM `clients` WHERE `Nick`="'.xjcpSecureNick($lines[0]).'" AND `Timestamp` > (NOW() - INTERVAL 10 MINUTE);';
+			$res = mysql_query($query);
 			
-			while ($line = mysql_fetch_assoc($result)) {
-				$currentUser = $line['Nick'];
-				$query = 'INSERT INTO `events`(`Nick`, `Type`, `Message`, `Trigger`) VALUES ("'.mysql_real_escape_string($currentUser).'","onStatusChange","0", "'.mysql_real_escape_string($lines[0]).'");';
-				mysql_query($query);
+			if (mysql_num_rows($res) == 0) {
+				setStatus($lines[0], 0);
 			}
 		}
 
 		// Remove unused client ids.
-		$query = 'DELETE FROM `clients` WHERE `Timestamp` < (NOW() - INTERVAL 60 MINUTE);';
+		$query = 'DELETE FROM `clients` WHERE `Timestamp` < (NOW() - INTERVAL 240 MINUTE);'; // 4 hours offline kills a session...
 		mysql_query($query);
 	}
 	
@@ -76,13 +59,13 @@
 	$out->msg = "Cannot connect to SQL!";
 	@mysql_connect($server, $username, $password) or die (json_encode($out));
 	$out->msg = "Cannot select DB!";
-    	@mysql_select_db($database) or die (json_encode($out));
+    @mysql_select_db($database) or die (json_encode($out));
 	$out->msg = "Invalid operation!";
 	
 	mysql_set_charset("UTF8");
 	
 	function authentificate($obj) {
-		$query = 'SELECT `Salt` FROM `users` WHERE `Nick`="'.mysql_real_escape_string($obj->user).'";';
+		$query = 'SELECT `Salt` FROM `users` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->user)).'";';
 		$result = mysql_query($query);
     		$num = mysql_num_rows($result);
     		if ($num != 1) {
@@ -94,7 +77,7 @@
 		$salt = mysql_result($result,0,"Salt");
 		$pw = md5($obj->password.$salt);
 		
-		$query = 'SELECT `Nick` FROM `users` WHERE `Nick`="'.mysql_real_escape_string($obj->user).'" AND `Password`="'.mysql_real_escape_string($pw).'";';
+		$query = 'SELECT `Nick` FROM `users` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->user)).'" AND `Password`="'.xjcpSecureString($pw).'";';
     		$result = mysql_query($query);
     		$num = mysql_num_rows($result);
     	
@@ -104,11 +87,11 @@
         		$returnValue->msg = $obj;
         		return $returnValue;
     		}
-		$query = 'UPDATE `clients` SET `Timestamp`=CURRENT_TIMESTAMP WHERE `ClientID`="'.mysql_real_escape_string($obj->id).'";';
+		$query = 'UPDATE `clients` SET `Timestamp`=CURRENT_TIMESTAMP WHERE `Nick`="'.xjcpSecureString(LOWER($obj->user)).'" AND `ClientID`="'.xjcpSecureString($obj->id).'";';
 		mysql_query($query);
 
 		cleanUpDB();
-    		return null;
+    	return null;
 	}
 	
 	function login ($obj) {
@@ -116,10 +99,10 @@
     	if ($returnValue == null) {
         	$returnValue = new Message;
   		
-    		$query = 'UPDATE `users` SET `Status`=1 WHERE `Nick`="'.mysql_real_escape_string($obj->user).'";';
+    		$query = 'UPDATE `users` SET `Status`=1 WHERE `Nick`="'.xjcpSecureString(LOWER($obj->user)).'";';
     		mysql_query($query);
     		
-    		$query = 'SELECT `RealName` FROM `users` WHERE `Nick`="'.mysql_real_escape_string($obj->user).'";';
+    		$query = 'SELECT `RealName` FROM `users` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->user)).'";';
     		$result = mysql_query($query);
     		$num = mysql_num_rows($result);
     		if ($num > 0) {
@@ -127,11 +110,11 @@
     			$returnValue->msg = $line['RealName'];
     		}
     		
-    		$query = 'SELECT `Nick` FROM `contacts` WHERE `Friend`="'.mysql_real_escape_string($obj->user).'";';
+    		$query = 'SELECT `Nick` FROM `contacts` WHERE `Friend`="'.xjcpSecureString(LOWER($obj->user)).'";';
     		$result = mysql_query($query);
     		while ($line = mysql_fetch_assoc($result)) {
                 $currentUser = $line['Nick'];
-    			$query = 'INSERT INTO `events`(`Nick`, `Type`, `Message`, `Trigger`) VALUES ("'.mysql_real_escape_string($currentUser).'","onStatusChange","1", "'.mysql_real_escape_string($obj->user).'");';
+    			$query = 'INSERT INTO `events`(`Nick`, `Type`, `Message`, `Trigger`) VALUES ("'.xjcpSecureString($currentUser).'","onStatusChange","1", "'.xjcpSecureString(LOWER($obj->user)).'");';
     			mysql_query($query);
     		}
         	$returnValue->type = "onConnect";
@@ -143,10 +126,20 @@
 		$returnValue = authentificate($obj);
     	if ($returnValue == null) {
         	$returnValue = new Message;
+			
+			$id = "ERROR";
+			$num = 10;
+			while ($num > 0) { // Ensure that our id is unique
+				$id = randomstring(32);
+				$query = 'SELECT `IP` FROM `clients` WHERE `ClientID`="'.xjcpSecureString($id).'";';
+				$result = mysql_query($query);
+				$num = mysql_num_rows($result);
+			}
+
+			$ip = $_SERVER['REMOTE_ADDR'];
+			$query = 'INSERT INTO `clients`(`Nick`, `ClientID`, `IP`) VALUES ("'.xjcpSecureString(LOWER($obj->user)).'","'.xjcpSecureString($id).'","'.xjcpSecureString($ip).'")';
+			mysql_query($query);
         	
-        	$id = mysql_real_escape_string(randomstring(32));
-    		$query = 'INSERT INTO `clients`(`Nick`, `ClientID`) VALUES ("'.mysql_real_escape_string($obj->user).'","'.mysql_real_escape_string($id).'")';
-    		mysql_query($query);
     		$returnValue->msg = $id;
         	$returnValue->type = "onIdRequest";
         }
@@ -157,7 +150,20 @@
 		$returnValue = authentificate($obj);
 		if ($returnValue == null) {
 			$returnValue = new Message;
-			$query = 'SELECT Nick, LocalName, MAX(`Time`) FROM `conversations`, `messages` WHERE `Receiver`=`Nick` AND `Member`="'.mysql_real_escape_string($obj->user).'" group by Nick order by MAX(`Time`) desc;';
+			
+			$query = 'SELECT Nick FROM `conversations` WHERE `Member`="'.xjcpSecureString(LOWER($obj->user)).'";';
+			$result = mysql_query($query); 
+    		while ($line = mysql_fetch_assoc($result)) {
+                $nick = $line['Nick'];
+				$query = 'SELECT `Receiver` FROM `conversations`, `messages` WHERE `Receiver`="'.xjcpSecureString(LOWER($nick)).'";';
+				$result2 = mysql_query($query);
+				if (0 == mysql_num_rows($result2)) {
+					$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("watchdog", "'.xjcpSecureString(LOWER($nick)).'", "Created new conversation.");';
+					mysql_query($query);
+				}
+			}
+			
+			$query = 'SELECT Nick, LocalName, MAX(`Time`) FROM `conversations`, `messages` WHERE `Receiver`=`Nick` AND `Member`="'.xjcpSecureString(LOWER($obj->user)).'" group by Nick order by MAX(`Time`) desc;';
 			$result = mysql_query($query); 
     		$returnValue->type = "onGetChats";
     		$returnValue->msg = array();
@@ -178,7 +184,7 @@
 		$returnValue = authentificate($obj);
 		if ($returnValue == null) {
 			$returnValue = new Message;
-			$query = 'SELECT `Friend`, `RealName`, `Status` FROM `contacts`, `users` WHERE contacts.Nick="'.mysql_real_escape_string($obj->user).'" AND `Friend`=users.Nick order by `Status` desc, `RealName` asc;';
+			$query = 'SELECT `Friend`, `RealName`, `Status` FROM `contacts`, `users` WHERE contacts.Nick="'.xjcpSecureString(LOWER($obj->user)).'" AND `Friend`=users.Nick order by `Status` desc, `RealName` asc;';
 			$result = mysql_query($query);
     		$returnValue->type = "onGetContacts";
     		$returnValue->msg = array();
@@ -201,15 +207,15 @@
 			$returnValue = new MessageE;
 			$count = 60;
 			if (isset($obj->count)) {
-				$count = mysql_real_escape_string($obj->count);
+				$count = xjcpSecureString($obj->count);
 			}
-			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.mysql_real_escape_string($obj->conversation).'" AND `Member`="'.mysql_real_escape_string($obj->user).'"';
+			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`="'.xjcpSecureString(LOWER($obj->user)).'"';
 			$result = mysql_query($query);
     		$num = mysql_num_rows($result);
     		if ($num < 1) {
 				return $returnValue;
 			}
-			$query = 'SELECT `RealName`, `Time`, `Author`, `Message` FROM `users`, `messages` WHERE `Author`=`Nick` AND `Receiver`="'.mysql_real_escape_string($obj->conversation).'" order by Time desc limit '.mysql_real_escape_string($count).';';
+			$query = 'SELECT `RealName`, `Time`, `Author`, `Message` FROM `users`, `messages` WHERE `Author`=`Nick` AND `Receiver`="'.xjcpSecureString(LOWER($obj->conversation)).'" order by Time desc limit '.xjcpSecureString($count).';';
 			$result = mysql_query($query);
     		$num = mysql_num_rows($result);
     		$returnValue->type = "onGetHistory";
@@ -220,7 +226,7 @@
     			$i++;
                 $message = new ChatMessage;
                 $message->author = $line['RealName'];
-                $message->authorNick = $line['Author'];
+                $message->authorNick = LOWER($line['Author']);
                 $message->time = $line['Time'];
                 $message->message = $line['Message'];
     			$returnValue->msg[$i] = $message;
@@ -234,7 +240,7 @@
 		if ($returnValue == null) {
 			$returnValue = new Message;
 			// Check if conversation exists
-			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.mysql_real_escape_string($obj->conversation).'" AND `Member`="'.mysql_real_escape_string($obj->user).'";';
+			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`="'.xjcpSecureString(LOWER($obj->user)).'";';
 			$result = mysql_query($query);
     		$num = mysql_num_rows($result);
     		if ($num != 1) {
@@ -243,15 +249,15 @@
     			return $returnValue;
     		}
 			
-			$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("'.mysql_real_escape_string($obj->user).'", "'.mysql_real_escape_string($obj->conversation).'", "'.mysql_real_escape_string(htmlspecialchars($obj->message)).'");';
+			$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("'.xjcpSecureString(LOWER($obj->user)).'", "'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString($obj->message).'");';
 			$result = mysql_query($query);
 			
     		cleanUpDB();
 			
-			$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.mysql_real_escape_string($obj->conversation).'" AND `Member`=clients.Nick AND NOT clients.Nick="'.mysql_real_escape_string($obj->user).'";';
+			$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`=clients.Nick AND NOT clients.Nick="'.xjcpSecureString(LOWER($obj->user)).'";';
     		$result = mysql_query($query);
     		while ($line = mysql_fetch_assoc($result)) {
-    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.mysql_real_escape_string($line['ClientID']).'","onMessage","'.mysql_real_escape_string($obj->conversation).'", "'.mysql_real_escape_string($obj->user).'", "'.mysql_real_escape_string(htmlspecialchars($obj->message)).'");';
+    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($obj->user)).'", "'.xjcpSecureString($obj->message).'");';
     			mysql_query($query);
     		}
     		$returnValue->type = "onMessage";
@@ -265,7 +271,7 @@
 		if ($returnValue == null) {
 			$returnValue = new Message;
 			// Check if conversation exists
-			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.mysql_real_escape_string($obj->conversation).'" AND `Member`="'.mysql_real_escape_string($obj->user).'";';
+			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`="'.xjcpSecureString(LOWER($obj->user)).'";';
 			$result = mysql_query($query);
     		$num = mysql_num_rows($result);
     		if ($num != 1) {
@@ -275,10 +281,10 @@
     		}
 
     		cleanUpDB();
-		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.mysql_real_escape_string($obj->conversation).'" AND `Member`=clients.Nick AND NOT clients.Nick="'.mysql_real_escape_string($obj->user).'";';
+		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`=clients.Nick AND NOT clients.Nick="'.xjcpSecureString(LOWER($obj->user)).'";';
     		$result = mysql_query($query);
     		while ($line = mysql_fetch_assoc($result)) {
-    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.$line['ClientID'].'","onBlaCall","'.mysql_real_escape_string($obj->conversation).'", "'.mysql_real_escape_string($obj->user).'", "'.mysql_real_escape_string(json_encode($obj->message)).'");';
+    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.$line['ClientID'].'","onBlaCall","'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($obj->user)).'", "'.xjcpSecureString(json_encode($obj->message)).'");';
     			mysql_query($query);
     		}
     		$returnValue->type = "onMessage";
@@ -291,8 +297,14 @@
 		$returnValue = authentificate($obj);
 		if ($returnValue == null) {
 			$returnValue = new Message;
+			
+			$name = explode(',', LOWER($obj->conversation));
+			sort($name);
+			$obj->conversation = implode(',', $name);
+			
+			
 			// Check if conversation exists
-			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.mysql_real_escape_string(htmlspecialchars($obj->conversation)).'" AND `Member`="'.mysql_real_escape_string($obj->user).'";';
+			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`="'.xjcpSecureString(LOWER($obj->user)).'";';
 			$result = mysql_query($query);
     		$num = mysql_num_rows($result);
     		if ($num > 0) {
@@ -301,28 +313,29 @@
     			return $returnValue;
     		}
 			
-			$name = explode(",", $obj->conversation);
-			
 			if (count($name) == 2) {
-				$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.mysql_real_escape_string($obj->conversation).'", "'.mysql_real_escape_string($name[0]).'", "'.mysql_real_escape_string($name[1]).'");';
+				$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($name[0])).'", "'.xjcpSecureString($name[1]).'");';
 				mysql_query($query);
 			
-				$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.mysql_real_escape_string($obj->conversation).'", "'.mysql_real_escape_string($name[1]).'", "'.mysql_real_escape_string($name[0]).'");';
+				$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($name[1])).'", "'.xjcpSecureString($name[0]).'");';
 				mysql_query($query);
 			} else {
 				$i = 0;
 				while ($i < count($name)) {
-					$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.mysql_real_escape_string($obj->conversation).'", "'.mysql_real_escape_string($name[$i]).'", "'.mysql_real_escape_string($obj->conversation).'");';
+					$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($name[$i])).'", "'.xjcpSecureString(LOWER($obj->conversation)).'");';
 					mysql_query($query);
 					$i++;
 				}
 			}
 			
+			$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("watchdog", "'.xjcpSecureString(LOWER($obj->conversation)).'", "Created new conversation.");';
+			$result = mysql_query($query);
 			
-			$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND conversations.Nick="'.mysql_real_escape_string($obj->conversation).'";';
+			
+			$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND conversations.Nick="'.xjcpSecureString(LOWER($obj->conversation)).'";';
     		$result = mysql_query($query);
     		while ($line = mysql_fetch_assoc($result)) {
-    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onConversation","'.mysql_real_escape_string($obj->conversation).'", "'.mysql_real_escape_string($obj->user).'");';
+    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onConversation","'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($obj->user)).'");';
     			mysql_query($query);
     		}
     		$returnValue->type = "onConversation";
@@ -336,7 +349,7 @@
 		if ($returnValue == null) {
 			$returnValue = new Message;
 			// Check if conversation exists
-			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.mysql_real_escape_string($obj->conversation).'" AND `Member`="'.mysql_real_escape_string($obj->user).'";';
+			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`="'.xjcpSecureString(LOWER($obj->user)).'";';
 			$result = mysql_query($query);
 			$num = mysql_num_rows($result);
 			if ($num < 1) {
@@ -345,13 +358,13 @@
 			    return $returnValue;
 			}
 			
-			$query = 'UPDATE `conversations` SET `LocalName`="'.mysql_real_escape_string(htmlspecialchars($obj->name)).'" WHERE `Nick`="'.mysql_real_escape_string($obj->conversation).'" AND `Member`="'.mysql_real_escape_string($obj->user).'"';
+			$query = 'UPDATE `conversations` SET `LocalName`="'.xjcpSecureString($obj->name).'" WHERE `Nick`="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`="'.xjcpSecureString(LOWER($obj->user)).'"';
 			mysql_query($query);
 			
-			$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND conversations.Nick="'.mysql_real_escape_string($obj->conversation).'";';
+			$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND conversations.Nick="'.xjcpSecureString(LOWER($obj->conversation)).'";';
     		$result = mysql_query($query);
     		while ($line = mysql_fetch_assoc($result)) {
-    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onConversation","'.mysql_real_escape_string($obj->conversation).'", "'.mysql_real_escape_string($obj->user).'");';
+    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onConversation","'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($obj->user)).'");';
     			mysql_query($query);
     		}
     		$returnValue->type = "onConversation";
@@ -365,7 +378,7 @@
 		if ($returnValue == null) {
 			$returnValue = new Message;
 			// Check if conversation exists
-			$query = 'SELECT `Nick` FROM `contacts` WHERE `Nick`="'.mysql_real_escape_string($obj->user).'" AND `Friend`="'.mysql_real_escape_string($obj->name).'";';
+			$query = 'SELECT `Nick` FROM `contacts` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->user)).'" AND `Friend`="'.xjcpSecureString(LOWER($obj->name)).'";';
 			$result = mysql_query($query);
 			$num = mysql_num_rows($result);
     			if ($num > 0) {
@@ -374,10 +387,10 @@
     				return $returnValue;
     			}
 			
-			$query = 'INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ("'.mysql_real_escape_string($obj->user).'", "'.mysql_real_escape_string($obj->name).'");';
+			$query = 'INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ("'.xjcpSecureString(LOWER($obj->user)).'", "'.xjcpSecureString(LOWER($obj->name)).'");';
 			mysql_query($query);
 			
-			$query = 'INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ("'.mysql_real_escape_string($obj->name).'", "'.mysql_real_escape_string($obj->user).'");';
+			$query = 'INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ("'.xjcpSecureString(LOWER($obj->name)).'", "'.xjcpSecureString(LOWER($obj->user)).'");';
 			mysql_query($query);
 			
     			$returnValue->type = "onConversation";
@@ -389,12 +402,12 @@
 	function removeEvents($obj) {
 		$returnValue = authentificate($obj);
 		if ($returnValue == null) {
-			$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND clients.Nick="'.mysql_real_escape_string($obj->user).'" AND conversations.Nick="'.mysql_real_escape_string($obj->conversation).'";';
+			$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND clients.Nick="'.xjcpSecureString(LOWER($obj->user)).'" AND conversations.Nick="'.xjcpSecureString(LOWER($obj->conversation)).'";';
     		$result = mysql_query($query);
     		while ($line = mysql_fetch_assoc($result)) {
-			//$query = 'DELETE FROM `events` WHERE `ClientID`="'.$line['ClientID'].' AND `Message`="'.mysql_real_escape_string($obj->conversation).'";';
+			//$query = 'DELETE FROM `events` WHERE `ClientID`="'.$line['ClientID'].' AND `Message`="'.xjcpSecureString($obj->conversation).'";';
     			//mysql_query($query);
-    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onMessageHandled","'.mysql_real_escape_string($obj->conversation).'", "'.mysql_real_escape_string($obj->user).'");';
+    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onMessageHandled","'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($obj->user)).'");';
 			mysql_query($query);
     		}
     		$returnValue->type = "onRemoveEvent";
@@ -410,16 +423,18 @@
 		if ($returnValue == null) {
 		
 			// Check if client exists if not, insert 
-			$query = 'SELECT `ClientID` FROM `clients` WHERE `ClientID`="'.mysql_real_escape_string($obj->id).'";';
+			$query = 'SELECT `ClientID` FROM `clients` WHERE `ClientID`="'.xjcpSecureString($obj->id).'";';
 			$result = mysql_query($query);
-			// If client was kicked off for inactivity add it back to client  list.
+			// If client was kicked off for inactivity send back error.
 			if (mysql_num_rows($result) < 1) {
-				$query = 'INSERT INTO `clients`(`Nick`, `ClientID`) VALUES ("'.mysql_real_escape_string($obj->user).'","'.mysql_real_escape_string($obj->id).'")';
-				mysql_query($query);
+        		$returnValue = new Message;
+        		$returnValue->type = "onRejected";
+        		$returnValue->msg = $obj;
+        		return $returnValue;
 			}
 		
 			$returnValue = new Message;
-			$query = 'SELECT `Type`, `Message`, `Trigger`, `Text` FROM `events` WHERE `ClientID`="'.mysql_real_escape_string($obj->id).'";';
+			$query = 'SELECT `Type`, `Message`, `Trigger`, `Text` FROM `events` WHERE `ClientID`="'.xjcpSecureString($obj->id).'";';
 			$result = mysql_query($query);
 			
 			$i = 0;
@@ -435,10 +450,10 @@
 				$i++;
 			}
 			
-			$query = 'DELETE FROM `events` WHERE `ClientID`="'.mysql_real_escape_string($obj->id).'";';
+			$query = 'DELETE FROM `events` WHERE `ClientID`="'.xjcpSecureString($obj->id).'";';
 			mysql_query($query);
 			
-			$query = 'UPDATE `clients` SET `Timestamp`=CURRENT_TIMESTAMP WHERE `ClientID`="'.mysql_real_escape_string($obj->id).'";';
+			$query = 'UPDATE `clients` SET `Timestamp`=CURRENT_TIMESTAMP WHERE `ClientID`="'.xjcpSecureString($obj->id).'";';
 			mysql_query($query);
 			
 			cleanUpDB();
@@ -450,15 +465,15 @@
 		$returnValue = authentificate($obj);
 		
 		if ($returnValue == null) {
-			$query = 'UPDATE `users` SET `Status`='.mysql_real_escape_string($obj->status).' WHERE `Nick`="'.mysql_real_escape_string($obj->user).'";';
+			$query = 'UPDATE `users` SET `Status`='.xjcpSecureString($obj->status).' WHERE `Nick`="'.xjcpSecureString(LOWER($obj->user)).'";';
     		mysql_query($query);
     		
-			$query = 'SELECT `Nick` FROM `contacts` WHERE `Friend`="'.mysql_real_escape_string($obj->user).'";';
+			$query = 'SELECT `Nick` FROM `contacts` WHERE `Friend`="'.xjcpSecureString(LOWER($obj->user)).'";';
 			$result = mysql_query($query);
 			
 			while ($line = mysql_fetch_assoc($result)) {
 				$currentUser = $line['Nick'];
-				$query = 'INSERT INTO `events`(`Nick`, `Type`, `Message`, `Trigger`) VALUES ("'.$currentUser.'","onStatusChange","'.mysql_real_escape_string($obj->status).'", "'.mysql_real_escape_string($obj->user).'");';
+				$query = 'INSERT INTO `events`(`Nick`, `Type`, `Message`, `Trigger`) VALUES ("'.$currentUser.'","onStatusChange","'.xjcpSecureString($obj->status).'", "'.xjcpSecureString(LOWER($obj->user)).'");';
 				mysql_query($query);
 			}
 			
@@ -475,7 +490,7 @@
 		if ($returnValue == null) {
 			$returnValue = new Message;
 			
-			$query = 'UPDATE `users` SET `RealName`="'.mysql_real_escape_string(htmlspecialchars($obj->name)).'" WHERE `Nick`="'.mysql_real_escape_string($obj->user).'"';
+			$query = 'UPDATE `users` SET `RealName`="'.xjcpSecureString($obj->name).'" WHERE `Nick`="'.xjcpSecureString(LOWER($obj->user)).'"';
 			mysql_query($query);
 			
 			$returnValue->type = "onConversation";
@@ -485,31 +500,46 @@
 	}
 	
 	function postData($obj) {
-		$returnValue = authentificate($obj);
+	  $returnValue = authentificate($obj);
 		
-		/*if ($returnValue == null) {
-			$conversation = mysql_real_escape_string($obj->conversation);
-			$target_path = "data/".date("Y-m-d_H-s",time())."_";
-			$target_path = $target_path . basename( $_FILES['uploadedfile']['name']); 
-			if(move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path)) {
-				if ($obj->type == "image") {
-					$obj->message = "#image https://www.ssl-id.de/hangout.f-online.net/api/".$target_path;
-				} else if ($obj->type == "video") {
-					$obj->message = "#video https://www.ssl-id.de/hangout.f-online.net/api/".$target_path;
-				} else if ($obj->type == "file") {
-					$obj->message = "#file https://www.ssl-id.de/hangout.f-online.net/api/".$target_path;
-				} else {
+	  if ($returnValue == null) {
+		$conversation = xjcpSecureString(LOWER($obj->conversation));
+		$target_path = "data/".date("Y-m-d_H-s",time())."_";
+		$target_path = $target_path . basename( $_FILES['uploadedfile']['name']);
+		
+		// Only allow specific line endings.
+		if((endsWith($target_path, ".png") || endsWith($target_path, ".jpg")
+		  || endsWith($target_path, ".avi") || endsWith($target_path, ".mp4")
+		  || endsWith($target_path, ".txt") || endsWith($target_path, ".zip")
+		  || endsWith($target_path, ".java") || endsWith($target_path, ".rb")
+		  || endsWith($target_path, ".js") || endsWith($target_path, ".c")
+		  || endsWith($target_path, ".cpp") || endsWith($target_path, ".h")
+		  || endsWith($target_path, ".obj") || endsWith($target_path, ".blend")
+		  || endsWith($target_path, ".fsh") || endsWith($target_path, ".vsh"))
+		  && move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path)) {
+			if (endsWith($target_path, ".png") || endsWith($target_path, ".jpg")) {
+				$obj->message = "#image https://www.ssl-id.de/hangout.f-online.net/api/".$target_path;
+			} else if (endsWith($target_path, ".avi") || endsWith($target_path, ".mp4")) {
+				$obj->message = "#video https://www.ssl-id.de/hangout.f-online.net/api/".$target_path;
+			} else if (endsWith($target_path, ".txt") || endsWith($target_path, ".zip")
+			  || endsWith($target_path, ".java") || endsWith($target_path, ".rb")
+			  || endsWith($target_path, ".js") || endsWith($target_path, ".c")
+			  || endsWith($target_path, ".cpp") || endsWith($target_path, ".h")
+			  || endsWith($target_path, ".obj") || endsWith($target_path, ".blend")
+			  || endsWith($target_path, ".fsh") || endsWith($target_path, ".vsh")) {
+				$obj->message = "#file https://www.ssl-id.de/hangout.f-online.net/api/".$target_path;
+			} else {
 					$returnValue = new Message;
 					$returnValue->msg = "Unknown datatype";
-				}
-				$returnValue = send($obj);
-			} else {
-				$returnValue = new Message;
-				$returnValue->msg = "Upload failed";
 			}
-		}*/
+			$returnValue = send($obj);
+		} else {
+			$returnValue = new Message;
+			$returnValue->msg = "Unknown datatype or upload failed!";
+		}
+	  }
 		
-		return $returnValue;
+	  return $returnValue;
 	}
 	
 	function setProfileImage($obj) {
@@ -517,7 +547,7 @@
 		
 		if ($returnValue == null) {
 		
-			$target_path = "imgs/profile_".mysql_real_escape_string($obj->user).".png";
+			$target_path = "imgs/profile_".xjcpSecureString(LOWER($obj->user)).".png";
 			
 			if(move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path)) {
 				$returnValue = send($obj);
@@ -535,17 +565,20 @@
 		
 		if ($returnValue == null) {
 
-			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.mysql_real_escape_string($obj->conversation).'" AND `Member`="'.mysql_real_escape_string($obj->user).'"';
+			$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`="'.xjcpSecureString(LOWER($obj->user)).'"';
 			$result = mysql_query($query);
-    			$num = mysql_num_rows($result);
-    			if ($num < 1) {
-				return $returnValue;
+    		$num = mysql_num_rows($result);
+    		if ($num < 1) {
+        		$returnValue = new Message;
+        		$returnValue->type = "onRejected";
+        		$returnValue->msg = $obj;
+        		return $returnValue;
 			}
 		
-			/*$name = explode(",", mysql_real_escape_string($obj->conversation));
+			$name = explode(",", xjcpSecureString(LOWER($obj->conversation)));
 			
 			if (count($name) > 2) {
-				$target_path = "imgs/profile_".mysql_real_escape_string($obj->conversation).".png";
+				$target_path = "imgs/profile_".xjcpSecureString(LOWER($obj->conversation)).".png";
 			
 				if(move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path)) {
 					$returnValue = send($obj);
@@ -556,23 +589,10 @@
 			} else {
 				$returnValue = new Message;
 				$returnValue->msg = "Upload failed";
-			}*/
+			}
 		}
 		
 		return $returnValue;
-	}
-	
-	function my_callback($a) {
-		return chr(hexdec($a[1]));
-	}
-	
-	function unescapeJS($string) {
-		$outStr = preg_replace_callback(
-  			"(\\\\x([0-9a-f]{2}))i",
-  			my_callback,
-  			$string
-		);
-		return $outStr;
 	}
 	
 	$version1 = "ERROR";

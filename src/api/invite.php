@@ -48,6 +48,7 @@ function validateForm()
 <BR>
 <?PHP
 	include "settings.php";
+	include "helpers.php";
 
 	function writeCreateUserForm () {
 		echo ("<div id='formular'>");
@@ -86,7 +87,7 @@ function validateForm()
     mysql_set_charset("UTF8");
     
     function authentificate($user, $pw) {
-    	$query = 'SELECT `Salt` FROM `users` WHERE `Nick`="'.htmlspecialchars($user).'";';
+    	$query = 'SELECT `Salt` FROM `users` WHERE `Nick`="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
     	$num = mysql_num_rows($result);
     	if ($num != 1) {
@@ -95,7 +96,7 @@ function validateForm()
 		$salt = mysql_result($result,0,"Salt");
 		$pw = md5($pw.$salt);
 		
-		$query = 'SELECT `Nick` FROM `users` WHERE `Nick`="'.htmlspecialchars($user).'" AND `Password`="'.$pw.'";';
+		$query = 'SELECT `Nick` FROM `users` WHERE `Nick`="'.xjcpSecureNick($user).'" AND `Password`="'.$pw.'";';
     	$result = mysql_query($query);
     	$num = mysql_num_rows($result);
     	
@@ -106,7 +107,7 @@ function validateForm()
     }
     
     function validateCode($code) {
-    	$query = "SELECT `Inviter` FROM `invitations` WHERE `Code`='$code'";
+    	$query = "SELECT `Inviter` FROM `invitations` WHERE `Code`='".xjcpSecureString($code)."'";
     	$result = mysql_query($query);
     	if (mysql_num_rows($result) != 1) {
     		return false;
@@ -117,13 +118,13 @@ function validateForm()
 	function formCreator() {
 	if (isset($_POST['user']) && isset($_POST['pw'])) {
 		if (isset($_POST['code'])) {
-			if (validateCode(htmlspecialchars($_POST['code']))) {
-				$nick = htmlspecialchars($_POST['user']);
-				$pw = htmlspecialchars($_POST['pw']);
-				$name = htmlspecialchars($_POST['name']);
-				$email = htmlspecialchars($_POST['email']);
-				$description = htmlspecialchars($_POST['about']);
-				$code = htmlspecialchars($_POST['code']);
+			if (validateCode($_POST['code'])) {
+				$nick = $_POST['user'];
+				$pw = $_POST['pw'];
+				$name = $_POST['name'];
+				$email = $_POST['email'];
+				$description = $_POST['about'];
+				$code = $_POST['code'];
 				
 				// Check if values are valid
 				if (!preg_match("/[a-zA-Z0-9]+/", $nick)) {
@@ -151,39 +152,39 @@ function validateForm()
 				$pw = md5($pw.$salt);
 				
 				// Add new user...
-				$query = "INSERT INTO `users`(`Nick`, `Password`, `Salt`, `RealName`, `Status`, `Email`, `Image`, `Description`) VALUES ('$nick','$pw','$salt','$name',0,'$mail','null','$description');";
+				$query = "INSERT INTO `users`(`Nick`, `Password`, `Salt`, `RealName`, `Status`, `Email`, `Image`, `Description`) VALUES ('".xjcpSecureNick($nick)."','$pw','$salt','".xjcpSecureString($name)."',0,'".xjcpSecureString($mail)."','null','".xjcpSecureString($description)."');";
 				$result = mysql_query($query);
 				
 				// Add inviter as friend
-				$query = "SELECT `Inviter` FROM `invitations` WHERE `Code`='$code';";
+				$query = "SELECT `Inviter` FROM `invitations` WHERE `Code`='".xjcpSecureString($code)."';";
 				$result = mysql_query($query);
 				$line = mysql_fetch_assoc($result);
 				$inviter = $line['Inviter'];
 				if ($inviter == null) {
 					echo("Internal error. You need a new invitation code.");
 				} else {
-					$query = "INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ('$nick','$inviter');";
+					$query = "INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ('".xjcpSecureNick($nick)."','".xjcpSecureNick($inviter)."');";
 					mysql_query($query);
-					$query = "INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ('$inviter','$nick');";
+					$query = "INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ('".xjcpSecureNick($inviter)."','".xjcpSecureNick($nick)."');";
 					mysql_query($query);
 					
 					echo ("<div align='center'><BR>Continue here:<BR><BR><BR><div class='dbutton'><a class='button' href='".$serverAddress."'>PC/Tablet</a></div><BR><BR><BR><div class='dbutton'><a class='button' href='".$serverAddress."/mobile.html'>Non-Android Mobile</a></div><BR><BR><BR><div class='dbutton'><a class='button' href='https://raw.github.com/penguinmenac3/BlaChat/master/app/bla.apk'>Android (APK)</a></div><BR><BR> Have fun!</div>");
 				}
 				
 				// Delete invitation code
-				$query = "DELETE FROM `invitations` WHERE `code`='$code';";
+				$query = "DELETE FROM `invitations` WHERE `code`='".xjcpSecureString($code)."';";
 				mysql_query($query);
 			} else {
 				// Invalid code
 				echo ("Sorry, your code has expired or never existed.");
 			}
 		} else {
-			$nick = htmlspecialchars($_POST['user']);
-			$pw = htmlspecialchars($_POST['pw']);
+			$nick = $_POST['user'];
+			$pw = $_POST['pw'];
 			if (authentificate($nick, $pw) == true) {
 				// Generate invitation link.
-				$code = htmlspecialchars(randomstring(32));
-				$query = "INSERT INTO `invitations`(`Inviter`, `Code`) VALUES ('$nick','$code');";
+				$code = randomstring(32);
+				$query = "INSERT INTO `invitations`(`Inviter`, `Code`) VALUES ('".xjcpSecureNick($nick)."','".xjcpSecureString($code)."');";
 				mysql_query($query);
 				include "settings.php";
 				echo("Pass this link to your friend: <BR><BR><BR><div class='dbutton'><a class='button' href='".$serverAddress."/api/invite.php?code=".$code."'>".$serverAddress."/api/invite.php?code=".$code."</a></div>");
@@ -192,7 +193,7 @@ function validateForm()
 			}
 		}
 	} else if (isset($_GET['code'])) {
-		if (validateCode(htmlspecialchars($_GET['code']))) {
+		if (validateCode($_GET['code'])) {
 			writeCreateUserForm();
 		} else {
 			echo ("Sorry, your code has expired or never existed.");

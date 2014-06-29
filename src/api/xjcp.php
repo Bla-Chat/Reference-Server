@@ -26,19 +26,14 @@
 		mysql_query($query);
 		
 		// Set users offline
-		$query = 'SELECT users.Nick FROM `clients`, `users` WHERE NOT `Status`=0  AND users.Nick=clients.Nick AND `Timestamp` < (NOW() - INTERVAL 10 MINUTE);';
+		$query = 'SELECT users.Nick FROM `users` WHERE NOT `Status`=0;';
 		$result = mysql_query($query);
 		while ($lines = mysql_fetch_array($result)) {
-			$query = 'UPDATE `users` SET `Status`=0 WHERE `Nick`="'.xjcpSecureString($lines[0]).'";';
-			mysql_query($query);
-    		
-			$query = 'SELECT `Nick` FROM `contacts` WHERE `Friend`="'.xjcpSecureString($lines[0]).'";';
-			$result = mysql_query($query);
+			$query = 'SELECT Nick, ClientID FROM `clients` WHERE `Nick`="'.xjcpSecureNick($lines[0]).'" AND `Timestamp` > (NOW() - INTERVAL 10 MINUTE);';
+			$res = mysql_query($query);
 			
-			while ($line = mysql_fetch_assoc($result)) {
-				$currentUser = $line['Nick'];
-				$query = 'INSERT INTO `events`(`Nick`, `Type`, `Message`, `Trigger`) VALUES ("'.xjcpSecureString($currentUser).'","onStatusChange","0", "'.xjcpSecureString($lines[0]).'");';
-				mysql_query($query);
+			if (mysql_num_rows($res) == 0) {
+				setStatus($lines[0], 0);
 			}
 		}
 
@@ -48,10 +43,11 @@
 	}
 		
 	function authentificate($id) {
+		if ($id == null || $id == "") return null;
 		$query = 'SELECT `IP` FROM `clients` WHERE `ClientID`="'.xjcpSecureString($id).'";';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
-		if ($num != 1) {
+		if ($num == 1) {
 			$line = mysql_fetch_assoc($result);
 			$ip = $_SERVER['REMOTE_ADDR'];
 			if ($line["IP"] == $ip) {
@@ -76,13 +72,13 @@
 		}
 
 		$ip = $_SERVER['REMOTE_ADDR'];
-		$query = 'INSERT INTO `clients`(`Nick`, `ClientID`, `IP`) VALUES ("'.xjcpSecureString($user).'","'.xjcpSecureString($id).'","'.xjcpSecureString($ip).'")';
+		$query = 'INSERT INTO `clients`(`Nick`, `ClientID`, `IP`) VALUES ("'.xjcpSecureNick($user).'","'.xjcpSecureString($id).'","'.xjcpSecureString($ip).'")';
 		mysql_query($query);
 		return $id;
 	}
 	
 	function login ($user, $pw, $minify) {
-		$query = 'SELECT `Salt` FROM `users` WHERE `Nick`="'.xjcpSecureString($user).'";';
+		$query = 'SELECT `Salt` FROM `users` WHERE `Nick`="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
 		if ($num != 1) {
@@ -90,7 +86,7 @@
 		}
 		$salt = mysql_result($result,0,"Salt");
 		$md5PW = md5($pw.$salt);
-		$query = 'SELECT `Nick` FROM `users` WHERE `Nick`="'.xjcpSecureString($user).'" AND `Password`="'.xjcpSecureString($md5PW).'";';
+		$query = 'SELECT `Nick` FROM `users` WHERE `Nick`="'.xjcpSecureNick($user).'" AND `Password`="'.xjcpSecureString($md5PW).'";';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
 		if ($num != 1) {
@@ -100,14 +96,14 @@
 		$query = 'UPDATE `clients` SET `Timestamp`=CURRENT_TIMESTAMP WHERE `ClientID`="'.xjcpSecureString($id).'";';
 		mysql_query($query);
 	
-		$query = 'UPDATE `users` SET `Status`=1 WHERE `Nick`="'.xjcpSecureString($user).'";';
+		$query = 'UPDATE `users` SET `Status`=1 WHERE `Nick`="'.xjcpSecureNick($user).'";';
 		mysql_query($query);
     	
-		$query = 'SELECT `Nick` FROM `contacts` WHERE `Friend`="'.xjcpSecureString($user).'";';
+		$query = 'SELECT `Nick` FROM `contacts` WHERE `Friend`="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
 		while ($line = mysql_fetch_assoc($result)) {
 			$currentUser = $line['Nick'];
-			$query = 'INSERT INTO `events`(`Nick`, `Type`, `Message`, `Trigger`) VALUES ("'.xjcpSecureString($currentUser).'","onStatusChange","1", "'.xjcpSecureString($user).'");';
+			$query = 'INSERT INTO `events`(`Nick`, `Type`, `Message`, `Trigger`) VALUES ("'.xjcpSecureString($currentUser).'","onStatusChange","1", "'.xjcpSecureNick($user).'");';
 			mysql_query($query);
 		}
 		return $id;
@@ -115,7 +111,7 @@
 		
 	function getChats ($user) {
 		$returnValue = array();
-		$query = 'SELECT Nick, LocalName, MAX(`Time`) FROM `conversations`, `messages` WHERE `Receiver`=`Nick` AND `Member`="'.xjcpSecureString($user).'" group by Nick order by MAX(`Time`) desc;';
+		$query = 'SELECT Nick, LocalName, MAX(`Time`) FROM `conversations`, `messages` WHERE `Receiver`=`Nick` AND `Member`="'.xjcpSecureNick($user).'" group by Nick order by MAX(`Time`) desc;';
 		$result = mysql_query($query);
 		$i = 0;
 		while ($line = mysql_fetch_assoc($result)) {
@@ -131,7 +127,7 @@
 
 	function getContacts ($user) {
 		$returnValue = array();
-		$query = 'SELECT `Friend`, `RealName`, `Status` FROM `contacts`, `users` WHERE contacts.Nick="'.xjcpSecureString($user).'" AND `Friend`=users.Nick order by `Status` desc, `RealName` asc;';
+		$query = 'SELECT `Friend`, `RealName`, `Status` FROM `contacts`, `users` WHERE contacts.Nick="'.xjcpSecureNick($user).'" AND `Friend`=users.Nick order by `Status` desc, `RealName` asc;';
 		$result = mysql_query($query);
 		$i = 0;
 		while ($line = mysql_fetch_assoc($result)) {
@@ -153,7 +149,7 @@
 		if (isset($obj->count)) {
 			$count = mysql_real_escape_string($obj->count);
 		}
-		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureString($user).'"';
+		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureNick($user).'"';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
 		if ($num < 1) {
@@ -177,18 +173,18 @@
 
 	function send($user, $obj) {
 		// Check if conversation exists
-		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureString($user).'";';
+		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
 		if ($num != 1) {
 			return "Conversation '".$obj->conversation."' does not exist!";
 		}
-		$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("'.xjcpSecureString($user).'", "'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($obj->message).'");';
+		$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($obj->message).'");';
 		$result = mysql_query($query);
-		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString($obj->conversation).'" AND `Member`=clients.Nick AND NOT clients.Nick="'.xjcpSecureString($user).'";';
+		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString($obj->conversation).'" AND `Member`=clients.Nick AND NOT clients.Nick="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
 		while ($line = mysql_fetch_assoc($result)) {
-			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($user).'", "'.xjcpSecureString($obj->message).'");';
+			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->message).'");';
 			mysql_query($query);
 		}
 		return "Success";
@@ -196,16 +192,16 @@
 
 	function injectEvent($user, $obj) {
 		// Check if conversation exists
-		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureString($user).'";';
+		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
 		if ($num != 1) {
 			return "Conversation '".$obj->conversation."' does not exist!";
 		}
-		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString($obj->conversation).'" AND `Member`=clients.Nick AND NOT clients.Nick="'.xjcpSecureString($user).'";';
+		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString($obj->conversation).'" AND `Member`=clients.Nick AND NOT clients.Nick="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
 		while ($line = mysql_fetch_assoc($result)) {
-			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.$line['ClientID'].'","'.xjcpSecureString($obj->type).'","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($user).'", "'.xjcpSecureString(json_encode($obj->message)).'");';
+			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.$line['ClientID'].'","'.xjcpSecureString($obj->type).'","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'", "'.xjcpSecureString(json_encode($obj->message)).'");';
 			mysql_query($query);
 		}
 		return "Success";
@@ -213,14 +209,27 @@
 	
 	// TODO only allow conversation ids with valid participants and user one participant
 	function newConversation($user, $obj) {
+		$name = explode(",", xjcpSecureString($obj->conversation));
+		$x = 0;
+		$hit = false;
+		while ($x < count($name)) {
+			if ($name[$x] == $user) {
+				$hit = true;
+			}
+			$x++;
+		}
+		if ($hit == false) {
+			return "You must be part of the conversation";
+		}
+		
 		// Check if conversation exists
-		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureString($user).'";';
+		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
 		if ($num > 0) {
 			return "Conversation '".$obj->conversation."' already exists!";
 		}
-		$name = explode(",", $obj->conversation);
+		
 		if (count($name) == 2) {
 			$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($name[0]).'", "'.xjcpSecureString($name[1]).'");';
 			mysql_query($query);
@@ -237,54 +246,61 @@
 		$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND conversations.Nick="'.xjcpSecureString($obj->conversation).'";';
 		$result = mysql_query($query);
 		while ($line = mysql_fetch_assoc($result)) {
-			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onConversation","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($user).'");';
+			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onConversation","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'");';
 			mysql_query($query);
 		}
 		return "Success";
 	}
 	
-	// TODO check if the user realy is participant
 	function renameConversation($user, $obj) {
 		// Check if conversation exists
-		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureString($user).'";';
+		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
 		if ($num < 1) {
 		    return "Conversation '".$obj->conversation."' does not exist!";
 		}
-		$query = 'UPDATE `conversations` SET `LocalName`="'.xjcpSecureString($obj->name).'" WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureString($user).'"';
+		$query = 'UPDATE `conversations` SET `LocalName`="'.xjcpSecureString($obj->name).'" WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureNick($user).'"';
 		mysql_query($query);
 		$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND conversations.Nick="'.xjcpSecureString($obj->conversation).'";';
 		$result = mysql_query($query);
 		while ($line = mysql_fetch_assoc($result)) {
-			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onConversation","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($user).'");';
+			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onConversation","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'");';
 			mysql_query($query);
 		}
 		return "Success";
 	}
 	
 	function addFriend($user, $obj) {
-		// Check if conversation exists
-		$query = 'SELECT `Nick` FROM `contacts` WHERE `Nick`="'.xjcpSecureString($user).'" AND `Friend`="'.xjcpSecureString($obj).'";';
+		// Check if friendship exists
+		$query = 'SELECT `Nick` FROM `users` WHERE `Nick`="'.xjcpSecureNick($obj).'";';
+		$result = mysql_query($query);
+		$num = mysql_num_rows($result);
+		if ($num == 0) {
+			return "The nick does not exist";
+		}
+		
+		// Check if friendship exists
+		$query = 'SELECT `Nick` FROM `contacts` WHERE `Nick`="'.xjcpSecureNick($user).'" AND `Friend`="'.xjcpSecureNick($obj).'";';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
 		if ($num > 0) {
     			return "You are already friends";
 		}
-		$query = 'INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ("'.xjcpSecureString($user).'", "'.xjcpSecureString($obj).'");';
+		$query = 'INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ("'.xjcpSecureNick($user).'", "'.xjcpSecureNick($obj).'");';
 		mysql_query($query);
-		$query = 'INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ("'.xjcpSecureString($obj).'", "'.xjcpSecureString($user).'");';
+		$query = 'INSERT INTO `contacts`(`Nick`, `Friend`) VALUES ("'.xjcpSecureNick($obj).'", "'.xjcpSecureNick($user).'");';
 		mysql_query($query);
 		return "Success";
 	}
 
 	function removeEvents($user, $obj) {
-		$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND clients.Nick="'.xjcpSecureString($user).'" AND conversations.Nick="'.xjcpSecureString($obj->conversation).'";';
+		$query = 'SELECT `ClientID` FROM `clients`,`conversations` WHERE `Member`=clients.Nick AND clients.Nick="'.xjcpSecureNick($user).'" AND conversations.Nick="'.xjcpSecureString($obj->conversation).'";';
 		$result = mysql_query($query);
 		while ($line = mysql_fetch_assoc($result)) {
 			//$query = 'DELETE FROM `events` WHERE `ClientID`="'.$line['ClientID'].' AND `Message`="'.xjcpSecureString($obj->conversation).'";';
 			//mysql_query($query);
-			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onMessageHandled","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($user).'");';
+			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`) VALUES ("'.$line['ClientID'].'","onMessageHandled","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'");';
 			mysql_query($query);
 		}
 	}
@@ -311,19 +327,19 @@
 	}
 	
 	function setStatus($user, $obj) {
-		$query = 'UPDATE `users` SET `Status`='.xjcpSecureString($obj).' WHERE `Nick`="'.xjcpSecureString($user).'";';
+		$query = 'UPDATE `users` SET `Status`='.xjcpSecureString($obj).' WHERE `Nick`="'.xjcpSecureNick($user).'";';
 		mysql_query($query);
-		$query = 'SELECT `Nick` FROM `contacts` WHERE `Friend`="'.xjcpSecureString($user).'";';
+		$query = 'SELECT `Nick` FROM `contacts` WHERE `Friend`="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
 		while ($line = mysql_fetch_assoc($result)) {
 			$currentUser = $line['Nick'];
-			$query = 'INSERT INTO `events`(`Nick`, `Type`, `Message`, `Trigger`) VALUES ("'.$currentUser.'","onStatusChange","'.xjcpSecureString($obj).'", "'.xjcpSecureString($user).'");';
+			$query = 'INSERT INTO `events`(`Nick`, `Type`, `Message`, `Trigger`) VALUES ("'.$currentUser.'","onStatusChange","'.xjcpSecureString($obj).'", "'.xjcpSecureNick($user).'");';
 			mysql_query($query);
 		}
 	}
 	
 	function setName($user, $obj) {
-		$query = 'UPDATE `users` SET `RealName`="'.xjcpSecureString($obj).'" WHERE `Nick`="'.xjcpSecureString($user).'"';
+		$query = 'UPDATE `users` SET `RealName`="'.xjcpSecureString($obj).'" WHERE `Nick`="'.xjcpSecureNick($user).'"';
 		mysql_query($query);
 	}
 	
@@ -362,7 +378,7 @@
 	}
 	
 	function setProfileImage($user) {
-		$target_path = "imgs/profile_".xjcpSecureString($user).".png";	
+		$target_path = "imgs/profile_".xjcpSecureNick($user).".png";	
 		if(move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path)) {
 			//return send($user, $obj);
 		} else {
@@ -373,7 +389,7 @@
 	
 	function setGroupImage($user, $obj) {
 		$returnValue = null;
-		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureString($user).'"';
+		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureNick($user).'"';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
 		if ($num < 1) {
@@ -398,34 +414,36 @@
 		$query = 'SELECT `Nick`, `IP` FROM `clients` WHERE `ClientID`="'.xjcpSecureString($id).'";';
 		$result = mysql_query($query);
 		$num = mysql_num_rows($result);
-		if ($num != 1) {
+		if ($num == 1) {
 			$line = mysql_fetch_assoc($result);
 			$ip = $_SERVER['REMOTE_ADDR'];
-			if ($line["IP"] == $ip) {
-				return $line["Nick"];
+			if ($line['IP'] == $ip) {
+				return $line['Nick'];
 			}
 			return null;
 		}
 		return null;
 	}
-	
 	if ($message == null) {
 		//var_dump($version1);
 		$out->onError = "Invalid msg or m tag";
-	} else if ((($out->id = authentificate($message->id)) == null)
+	} else if ((authentificate($message->id) == null)
 		&& (($out->id = login($message->user, $message->pw, $minify)) == null)){
 		$out->onLoginError = "Cannot perform login, retry!";
 	} else {
-		$user = getUser($out->id);
+		if (isset($out->id)) {
+			$message->id = $out->id;
+		}
+		$user = getUser($message->id);
 
-		// Events are allways requested.
-		$out->events = pollEvents($out->id);
+		// Events are always requested.
+		$out->events = pollEvents($message->id);
 
 		// Core xjcp features.
-		if (property_exists($message->getChats)) {
+		if (isset($message->getChats)) {
 			$out->onGetChats = getChats($user);
 		}
-		if (property_exists($message->getContacts)) {
+		if (isset($message->getContacts)) {
 			$out->onGetContacts = getContacts($user);
 		}
 		if ($message->getHistory != null) {

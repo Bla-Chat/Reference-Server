@@ -10,6 +10,10 @@
 	function xjcpSecureString($str) {
 		return mysql_real_escape_string(htmlspecialchars($str));
 	}
+	
+	function xjcpSecureNick($str) {
+		return xjcpSecureString(LOWER($str));
+	}
     
 	function randomstring($length = 32) {
 		$chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
@@ -22,6 +26,10 @@
 		$i++;
 		}
 		return $pass;
+	}
+	
+	function LOWER($str) {
+		return strtolower($str);
 	}
 
 	function my_callback($a) {
