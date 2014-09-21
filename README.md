@@ -18,3 +18,5 @@ To make developing clients easier there is now a java client side protocol imple
 
 There also exists an open source client implementation for android.
 https://github.com/penguinmenac3/BlaChat.
+
+The whole BlaChat-Project is more than 10k lines of code.
