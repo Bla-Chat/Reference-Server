@@ -216,7 +216,7 @@
 		} else {
 			$name = explode(",", xjcpSecureString($obj->conversation));
 			sort($name);
-			$obj->conversation = implode(",", $name);
+			//$obj->conversation = implode(",", $name);
 		}
 		$x = 0;
 		$hit = false;

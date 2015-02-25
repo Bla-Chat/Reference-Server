@@ -84,6 +84,7 @@ function ChatManager() {
 	this.count = 60;
 	var pw = null;
 	var initialized = false;
+	var dynamicUpdateIntervall = 1000;
 	
 	function loadState() {
 		if(typeof(Storage) !== "undefined") {
@@ -113,7 +114,7 @@ function ChatManager() {
 	function initialize() {
 		send({'type':'onGetContacts','msg':{'user':ui.user, 'password':pw}},onIncoming);
 		send({'type':'onGetChats','msg':{'user':ui.user, 'password':pw}},onIncoming);
-		window.setTimeout("ui.chatManager.eventTrigger()", 1000);
+		window.setTimeout("ui.chatManager.eventTrigger()", dynamicUpdateIntervall);
 		that.videoManager = new VideoCall(pw);
 		that.audioManager = new AudioCall(pw);
 	}
@@ -161,21 +162,27 @@ function ChatManager() {
 		
 		} else if (object.type == "onEvent") {			
 			if (ui.isConnected) {
-				window.setTimeout("ui.chatManager.eventTrigger()", 1000);
+				if (dynamicUpdateIntervall < 120000) {
+					dynamicUpdateIntervall += 1000;
+				}
+				window.setTimeout("ui.chatManager.eventTrigger()", dynamicUpdateIntervall);
 			}
 			for (var i = 0; i < object.msg.length; i++) {
 				var e = object.msg[i];
 				ui.unmarkAll();
 				if (e.type == "onMessage") {
-					playSound();
-					if (!ui.isForeground) {
-					    notify(e.msg, e.nick, e.text);
+					if ((ui.user == e.nick) == false) {
+						playSound();
+						if (!ui.isForeground) {
+						    notify(e.msg, e.nick, e.text);
+						}
+						if (ui.chatManager.chat && e.nick == ui.chatManager.chat.nick && ui.isForeground) {
+							that.consumeEvent(e);
+						} else {
+							ui.notifyContact(e.msg);
+						}
 					}
-					if (ui.chatManager.chat && e.nick == ui.chatManager.chat.nick && ui.isForeground) {
-						that.consumeEvent(e);
-					} else {
-						ui.notifyContact(e.msg);
-					}
+					dynamicUpdateIntervall = 1000;
 					// Also retrieve if chat not active.
 					that.chatUpdate(e.msg);
 				} else if (e.type == "onStatusChange") {
@@ -229,6 +236,7 @@ function ChatManager() {
 	};
 	
 	this.open = function (partner, name) {
+		dynamicUpdateIntervall = 1000;
 		that.chat = get(partner, chats);
 		if (that.chat == null) {
 			that.chat = new Chat(partner, name);
@@ -244,6 +252,7 @@ function ChatManager() {
 	};
 	
 	this.sendMsg = function () {
+		dynamicUpdateIntervall = 1000;
 		var msgBox = getComponent("msgBox");
 		var message = msgBox.value;
 		message = encode_utf8(message);
