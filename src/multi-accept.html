@@ -1,0 +1,106 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>PeerConnection Demo 1</title>
+<!-- Load the polyfill to switch-hit between Chrome and Firefox -->
+<script src="engine/adapter.js"></script>
+<style>
+video {
+  border:5px solid black;
+  width:480px;
+  height:360px;
+}
+button {
+  font: 18px sans-serif;
+  padding: 8px;
+}
+textarea {
+  font-family: monospace;
+  margin: 2px;
+  width:480px;
+  height:640px;
+}
+</style>
+</head>
+<body>
+<video id="vid1" autoplay="true" muted="true"></video>
+<video id="vid2" autoplay></video>
+<br>
+<button id="btn1" onclick="start()">Start</button>
+<button id="btn2" onclick="call()">Call</button>
+<button id="btn3" onclick="hangup()">Hang Up</button>
+<br>
+<script>
+//var vid1 = document.getElementById("vid1");
+//var vid2 = document.getElementById("vid2");
+btn1.disabled = false;
+btn2.disabled = true;
+btn3.disabled = true;
+
+function createSignalingChannel() {
+  this.send = function (data) {
+    // TODO send message through chat.
+  };
+}
+
+var signalingChannel = createSignalingChannel();
+var pc;
+var configuration = null;
+
+// run start(true) to initiate a call
+function start(isCaller) {
+    pc = new RTCPeerConnection(configuration);
+
+    // send any ice candidates to the other peer
+    pc.onicecandidate = function (evt) {
+        signalingChannel.send(JSON.stringify({ "candidate": evt.candidate }));
+    };
+
+    // once remote stream arrives, show it in the remote video element
+    pc.onaddstream = function (evt) {
+        remoteView.src = URL.createObjectURL(evt.stream);
+    };
+
+    // get the local stream, show it in the local video element and send it
+    navigator.getUserMedia({ "audio": true, "video": true }, function (stream) {
+        vid1.src = URL.createObjectURL(stream);
+        pc.addStream(stream);
+
+        if (isCaller)
+            pc.createOffer(gotDescription);
+        else
+            pc.createAnswer(pc.remoteDescription, gotDescription);
+
+        function gotDescription(desc) {
+            pc.setLocalDescription(desc);
+            signalingChannel.send(JSON.stringify({ "sdp": desc }));
+        }
+    });
+}
+
+signalingChannel.onmessage = function (evt) {
+    if (!pc)
+        start(false);
+
+    var signal = JSON.parse(evt.data);
+    if (signal.sdp)
+        pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
+    else
+        pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+};
+
+function hangup() {
+  if (pc) {
+    pc.close(); 
+    pc = null;
+  }
+  btn3.disabled = true;
+  btn2.disabled = false;
+}
+</script>
+</body>
+</html>
+
+
+

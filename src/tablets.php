@@ -24,14 +24,9 @@ echo '		<link rel="stylesheet" type="text/css" href="'.$serverAddress.'/style.cs
 				<source src="call.mp3" type="audio/mpeg">
 				<source src="call.ogg" type="audio/ogg">
 			</audio>
-			<div id="OpenCallOverlay">
-			<a href="javascript:ui.chatManager.audioManager.start(true);"><img id="audioCall" class="tinyImg" src="images/Call.png" alt="Audio Call" /></a>
-			<a href="javascript:ui.chatManager.videoManager.start(true);"><img id="videoCall" class="tinyImg" src="images/Video.png" alt="Video Call" /></a>
-			</div>
 			<div id="ExitCallOverlay">
 			<a href="javascript:ui.chatManager.declineCall();"><img id="exitCall" class="tinyImg" src="images/Exit.png" alt="Exit Call" /></a>
 			</div>
-			<i><a onclick="enableNotification();" href='#'>notifications</a></i>
 			<div id="incomingCallOverlay" class="incomingCallOverlay" align="center">
 				<a href="javascript:ui.chatManager.acceptCall();"><img id="acceptCall" class="tinyImg" src="images/Call.png" alt="Accept Call" /></a>
 				<a href="javascript:ui.chatManager.declineCall();"><img id="exitCall" class="tinyImg" src="images/Exit.png" alt="Decline Call" /></a>
@@ -52,8 +47,7 @@ echo '		<link rel="stylesheet" type="text/css" href="'.$serverAddress.'/style.cs
 				</div>
 			</div>
 			<div id='chatContainer' class='yScrollablePane'></div>
-			<input name="uploadFile" type="file" size="50" maxlength="100000" accept="text/*"><BR>
-			<textarea rows="3" cols="60" id='msgBox' onkeypress='handleKeyPress(event,this.form)'></textarea>
+			<textarea rows="5" cols="60" id='msgBox' onkeypress='handleKeyPress(event,this.form)'></textarea>
 		</div>
 <?PHP 
 echo '

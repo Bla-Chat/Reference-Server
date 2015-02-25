@@ -49,7 +49,7 @@
 		}
 
 		// Remove unused client ids.
-		$query = 'DELETE FROM `clients` WHERE `Timestamp` < (NOW() - INTERVAL 240 MINUTE);'; // 4 hours offline kills a session...
+		$query = 'DELETE FROM `clients` WHERE `Timestamp` < (NOW() - INTERVAL 100 DAY);'; // 4 hours offline kills a session...
 		mysql_query($query);
 	}
 	
@@ -298,9 +298,15 @@
 		if ($returnValue == null) {
 			$returnValue = new Message;
 			
-			$name = explode(',', LOWER($obj->conversation));
-			sort($name);
-			$obj->conversation = implode(',', $name);
+			if (substr( $string_n, 0, 1 ) === "#") {
+				# i think there is nothing to do here
+				$name = array();
+				$name[0] = $obj->user;
+			} else {
+				$name = explode(',', LOWER($obj->conversation));
+				sort($name);
+				$obj->conversation = implode(',', $name);
+			}
 			
 			
 			// Check if conversation exists
@@ -312,12 +318,26 @@
     			$returnValue->msg = "The requested conversation '".$obj->conversation."' already exists!";
     			return $returnValue;
     		}
-			
+
 			if (count($name) == 2) {
+				$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($name[0])).'", "'.xjcpSecureString($obj->conversation).'");';
+				mysql_query($query);
+			
+				$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`="'.xjcpSecureString("watchdog").'";';
+				$result = mysql_query($query);
+    			$num = mysql_num_rows($result);
+    			if ($num < 1) {
+    				$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString("watchdog").'", "'.xjcpSecureString($obj->conversation).'");';
+					mysql_query($query);
+    			}
+			} else if (count($name) == 2) {
 				$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($name[0])).'", "'.xjcpSecureString($name[1]).'");';
 				mysql_query($query);
 			
 				$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($name[1])).'", "'.xjcpSecureString($name[0]).'");';
+				mysql_query($query);
+
+				$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString("watchdog").'", "'.xjcpSecureString($obj->conversation).'");';
 				mysql_query($query);
 			} else {
 				$i = 0;
@@ -326,6 +346,8 @@
 					mysql_query($query);
 					$i++;
 				}
+				$query = 'INSERT INTO `conversations`(`Nick`, `Member`, `LocalName`) VALUES ("'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString("watchdog").'", "'.xjcpSecureString($obj->conversation).'");';
+				mysql_query($query);
 			}
 			
 			$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("watchdog", "'.xjcpSecureString(LOWER($obj->conversation)).'", "Created new conversation.");';
