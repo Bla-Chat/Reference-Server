@@ -2,9 +2,9 @@
 
 	ini_set('display_errors', '1');
 	
-	include "helpers.php";
-	include "settings.php";
-	include "types.php";
+	require_once "helpers.php";
+	require_once "settings.php";
+	require_once "types.php";
 	
 	$message = decodeObject();
 	$minify = $message->minified;
@@ -20,6 +20,25 @@
 	
 	mysql_set_charset("UTF8");
 	
+	function send($user, $obj) {
+		// Check if conversation exists
+		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureNick($user).'";';
+		$result = mysql_query($query);
+		$num = mysql_num_rows($result);
+		if ($num != 1) {
+			return "Conversation '".$obj->conversation."' does not exist!";
+		}
+		$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($obj->message).'");';
+		$result = mysql_query($query);
+		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString($obj->conversation).'" AND `Member`=clients.Nick;';
+		$result = mysql_query($query);
+		while ($line = mysql_fetch_assoc($result)) {
+			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->message).'");';
+			mysql_query($query);
+		}
+		return "Success";
+	}
+
 	function cleanUpDB() {
 		// Remove old events.
 		$query = 'DELETE FROM `events` WHERE `Timestamp` < (NOW() - INTERVAL 10 DAY);';
@@ -169,25 +188,6 @@
 			$returnValue->messages[$i] = $message;
 		}
 		return $returnValue;
-	}
-
-	function send($user, $obj) {
-		// Check if conversation exists
-		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureNick($user).'";';
-		$result = mysql_query($query);
-		$num = mysql_num_rows($result);
-		if ($num != 1) {
-			return "Conversation '".$obj->conversation."' does not exist!";
-		}
-		$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($obj->message).'");';
-		$result = mysql_query($query);
-		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString($obj->conversation).'" AND `Member`=clients.Nick;';
-		$result = mysql_query($query);
-		while ($line = mysql_fetch_assoc($result)) {
-			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->message).'");';
-			mysql_query($query);
-		}
-		return "Success";
 	}
 
 	function injectEvent($user, $obj) {

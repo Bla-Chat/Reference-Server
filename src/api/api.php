@@ -254,7 +254,7 @@
 			
     		cleanUpDB();
 			
-			$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`=clients.Nick AND NOT clients.Nick="'.xjcpSecureString(LOWER($obj->user)).'";';
+			$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`=clients.Nick;';
     		$result = mysql_query($query);
     		while ($line = mysql_fetch_assoc($result)) {
     			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($obj->user)).'", "'.xjcpSecureString($obj->message).'");';
