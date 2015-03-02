@@ -26,6 +26,15 @@
 		public $text = "";
 	}
 
+	class EventXJCP {
+		public $type = "onError";
+		public $msg = "unspecified error";
+		public $nick = "error";
+		public $text = "";
+		public $time = "";
+		public $author = "";
+	}
+
 	class History {
 		public $messages = array();
 		public $conversation = "error";

@@ -28,12 +28,23 @@
 		if ($num != 1) {
 			return "Conversation '".$obj->conversation."' does not exist!";
 		}
+
+		$query = 'SELECT `RealName` FROM `users` WHERE `Nick`="'.xjcpSecureString($user).'";';
+		$result = mysql_query($query);
+		$author = "bla";
+		if (mysql_num_rows($result) != 0) {
+			$line = mysql_fetch_assoc($result);
+			$author = $line['RealName'];
+		} else {
+			return "Username error";
+		}
+
 		$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($obj->message).'");';
 		$result = mysql_query($query);
 		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString($obj->conversation).'" AND `Member`=clients.Nick;';
 		$result = mysql_query($query);
 		while ($line = mysql_fetch_assoc($result)) {
-			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->message).'");';
+			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`, `Author`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->message).'", "'.xjcpSecureString($author).'");';
 			mysql_query($query);
 		}
 		return "Success";
@@ -68,11 +79,12 @@
 		$num = mysql_num_rows($result);
 		if ($num == 1) {
 			$line = mysql_fetch_assoc($result);
-			$ip = $_SERVER['REMOTE_ADDR'];
-			if ($line["IP"] == $ip) {
-				return $id;
-			}
-			return null;
+			// stupid idea for mobile devices...
+			//$ip = $_SERVER['REMOTE_ADDR'];
+			//if ($line["IP"] == $ip) {
+			//	return $id;
+			//}
+			return $id;
 		}
 		return null;
 	}
@@ -337,15 +349,17 @@
 	
 	function pollEvents($id) {
 		$returnValue = array();
-		$query = 'SELECT `Type`, `Message`, `Trigger`, `Text` FROM `events` WHERE `ClientID`="'.xjcpSecureString($id).'";';
+		$query = 'SELECT `Type`, `Timestamp`, `Author`, `Message`, `Trigger`, `Text` FROM `events` WHERE `ClientID`="'.xjcpSecureString($id).'";';
 		$result = mysql_query($query);
 		$i = 0;
 		while ($line = mysql_fetch_assoc($result)) {
-			$event = new Event;
+			$event = new EventXJCP;
 			$event->type = $line['Type'];
 			$event->msg = $line['Message'];
 			$event->nick = $line['Trigger'];
 			$event->text = $line['Text'];
+			$event->time = $line['Timestamp'];
+			$event->author = $line['Author'];
 			$returnValue[$i] = $event;
 			$i++;
 		}
@@ -446,11 +460,12 @@
 		$num = mysql_num_rows($result);
 		if ($num == 1) {
 			$line = mysql_fetch_assoc($result);
-			$ip = $_SERVER['REMOTE_ADDR'];
-			if ($line['IP'] == $ip) {
-				return $line['Nick'];
-			}
-			return null;
+			// Bad idea on mobile devices...
+			//$ip = $_SERVER['REMOTE_ADDR'];
+			//if ($line['IP'] == $ip) {
+			//	return $line['Nick'];
+			//}
+			return $line['Nick'];
 		}
 		return null;
 	}
