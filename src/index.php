@@ -58,6 +58,7 @@ echo '		<link rel="stylesheet" type="text/css" href="'.$serverAddress.'/style.cs
 <?PHP 
 echo '
 		<script type="text/javascript">window.mobilecheck = false; var serverlocation = "'.$serverAddress.'/api/"; var welcomeMessage = "'.$welcomeMessage.'";</script>
+		<script src="'.$serverAddress.'/engine/emotes.js"></script>
 		<script src="'.$serverAddress.'/engine/adapter.js"></script>
 		<script src="'.$serverAddress.'/engine/helper.js"></script>
 		<script src="'.$serverAddress.'/engine/chat.js"></script>

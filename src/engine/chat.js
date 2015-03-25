@@ -46,6 +46,8 @@ function Chat(nick, name) {
 							parts[j] = "<a target='_blank' href='mailto:" + parts[j] + "'>" + parts[j] + "</a>";
 						} else if (parts[j].search(/www\..+/) >= 0) {
 							parts[j] = "<a target='_blank' href='http://" + parts[j] + "'>" + parts[j] + "</a>";
+						} else if (parts[j] in emotes) {
+							parts[j] = "<img src=\"https://www.ssl-id.de/bla.f-online.net/emotes/" + emotes[parts[j]] + ".png\" />";
 						}
 						outMsg = outMsg + parts[j] + " ";
 					}
@@ -220,6 +222,7 @@ function ChatManager() {
 	};
 
 	this.chatUpdate = function(nick) {
+		dynamicUpdateIntervall = 1000;
 		send({'type':'onGetHistory','msg':{'user':ui.user, 'password':pw, 'conversation':nick, 'count':that.count}},onIncoming);
 	};
 	
