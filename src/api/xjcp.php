@@ -21,6 +21,7 @@
 	mysql_set_charset("UTF8");
 	
 	function send($user, $obj) {
+		$message_date = date("Y-m-d H:i:s");
 		// Check if conversation exists
 		$query = 'SELECT `Nick` FROM `conversations` WHERE `Nick`="'.xjcpSecureString($obj->conversation).'" AND `Member`="'.xjcpSecureNick($user).'";';
 		$result = mysql_query($query);
@@ -39,12 +40,12 @@
 			return "Username error";
 		}
 
-		$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($obj->message).'");';
+		$query = 'INSERT INTO `messages`(`Time` ,`Author`, `Receiver`, `Message`) VALUES ("'.$message_date.'", "'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureString($obj->message).'");';
 		$result = mysql_query($query);
 		$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString($obj->conversation).'" AND `Member`=clients.Nick;';
 		$result = mysql_query($query);
 		while ($line = mysql_fetch_assoc($result)) {
-			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`, `Author`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->message).'", "'.xjcpSecureString($author).'");';
+			$query = 'INSERT INTO `events`(`Timestamp`, `ClientID`, `Type`, `Message`, `Trigger`, `Text`, `Author`) VALUES ("'.$message_date.'", "'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString($obj->conversation).'", "'.xjcpSecureNick($user).'", "'.xjcpSecureString($obj->message).'", "'.xjcpSecureString($author).'");';
 			mysql_query($query);
 		}
 		return "Success";

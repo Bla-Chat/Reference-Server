@@ -248,6 +248,16 @@
     			$returnValue->msg = "The requested conversation '".$obj->conversation."' does not exist!";
     			return $returnValue;
     		}
+
+    		$query = 'SELECT `RealName` FROM `users` WHERE `Nick`="'.xjcpSecureString(LOWER($obj->user)).'";';
+			$result = mysql_query($query);
+			$author = "bla";
+			if (mysql_num_rows($result) != 0) {
+				$line = mysql_fetch_assoc($result);
+				$author = $line['RealName'];
+			} else {
+				return "Username error";
+			}
 			
 			$query = 'INSERT INTO `messages`(`Author`, `Receiver`, `Message`) VALUES ("'.xjcpSecureString(LOWER($obj->user)).'", "'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString($obj->message).'");';
 			$result = mysql_query($query);
@@ -257,7 +267,7 @@
 			$query = 'SELECT `ClientID` FROM `conversations`, `clients` WHERE conversations.Nick="'.xjcpSecureString(LOWER($obj->conversation)).'" AND `Member`=clients.Nick;';
     		$result = mysql_query($query);
     		while ($line = mysql_fetch_assoc($result)) {
-    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($obj->user)).'", "'.xjcpSecureString($obj->message).'");';
+    			$query = 'INSERT INTO `events`(`ClientID`, `Type`, `Message`, `Trigger`, `Text`, `Author`) VALUES ("'.xjcpSecureString($line['ClientID']).'","onMessage","'.xjcpSecureString(LOWER($obj->conversation)).'", "'.xjcpSecureString(LOWER($obj->user)).'", "'.xjcpSecureString($obj->message).'", "'.xjcpSecureString($author).'");';
     			mysql_query($query);
     		}
     		$returnValue->type = "onMessage";
