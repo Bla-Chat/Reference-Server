@@ -5,8 +5,6 @@
 	require_once "helpers.php";
 	require_once "settings.php";
 	require_once "types.php";
-
-	header('Access-Control-Allow-Origin: *');
 	
 	$message = decodeObject();
 	$minify = $message->minified;
@@ -350,7 +348,7 @@
 		}
 	}
 	
-	function pollEvents($id) {
+	function pollEvents($id, $time) {
 		$returnValue = array();
 		$query = 'SELECT `Type`, `Timestamp`, `Author`, `Message`, `Trigger`, `Text` FROM `events` WHERE `ClientID`="'.xjcpSecureString($id).'";';
 		$result = mysql_query($query);
@@ -363,34 +361,11 @@
 			$event->text = $line['Text'];
 			$event->time = $line['Timestamp'];
 			$event->author = $line['Author'];
-			$returnValue[$i] = $event;
-			$i++;
+			if (strtotime($line["Timestamp"]) > strtotime($time)) {
+				$returnValue[$i] = $event;
+				$i++;
+			}
 		}
-		$query = 'DELETE FROM `events` WHERE `ClientID`="'.xjcpSecureString($id).'";';
-		mysql_query($query);
-		$query = 'UPDATE `clients` SET `Timestamp`=CURRENT_TIMESTAMP WHERE `ClientID`="'.xjcpSecureString($id).'";';
-		mysql_query($query);
-		return $returnValue;
-	}
-	
-	function pollEventsByLastId($id, $lastid) {
-		$returnValue = array();
-		$query = 'SELECT `Type`, `Timestamp`, `Author`, `Message`, `Trigger`, `Text` FROM `events` WHERE `ClientID`="'.xjcpSecureString($id).'";';
-		$result = mysql_query($query);
-		$i = 0;
-		while ($line = mysql_fetch_assoc($result)) {
-			$event = new EventXJCP;
-			$event->type = $line['Type'];
-			$event->msg = $line['Message'];
-			$event->nick = $line['Trigger'];
-			$event->text = $line['Text'];
-			$event->time = $line['Timestamp'];
-			$event->author = $line['Author'];
-			$returnValue[$i] = $event;
-			$i++;
-		}
-		$query = 'DELETE FROM `events` WHERE `ClientID`="'.xjcpSecureString($id).'";';
-		mysql_query($query);
 		$query = 'UPDATE `clients` SET `Timestamp`=CURRENT_TIMESTAMP WHERE `ClientID`="'.xjcpSecureString($id).'";';
 		mysql_query($query);
 		return $returnValue;
@@ -565,11 +540,7 @@
 		
 		// Events must be last so they are triggered in one run.
 		// Events are always requested.
-		if ($message->lastid != null) {
-			$out->events = pollEventsByLastId($message->id, $message->lastid);
-		} else {
-			$out->events = pollEvents($message->id);
-		}
+		$out->events = pollEvents($message->id, $message->time);
 	}
 	
 	cleanUpDB();

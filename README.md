@@ -4,7 +4,9 @@ BlaChat-Server
 A secure and open source chat application, to give you insight what happens to your data.
 It is can be interpreted as an opensource clone of hangouts.
 
-![Image of the chat](http://www.michaelfuerst.de/wordpress/wp-content/uploads/2015/02/BlaChatServer.png)
+An <a href="https://github.com/Bla-Chat/Android">app</a> compatible with the server looks like this:
+<p><a href="https://github.com/Bla-Chat/Android/blob/master/images/overview.png?raw=true"><img src="https://github.com/Bla-Chat/Android/blob/master/images/overview.png?raw=true" height="400" target="_blank" /></a>
+<a href="https://github.com/Bla-Chat/Android/blob/master/images/chat.png?raw=true"><img src="https://github.com/Bla-Chat/Android/blob/master/images/chat.png?raw=true" height="400" target="_blank" /></a></p>
 
 The complete server including the web frontend is only at 4000 to 5000 lines of code, whereas the most recent api implementation doing all the work has only 500 lines of code to ensure easy maintainability and few space for bugs.
 

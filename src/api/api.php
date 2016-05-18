@@ -540,34 +540,22 @@
 		$target_path = $target_path . basename( $_FILES['uploadedfile']['name']);
 		
 		// Only allow specific line endings.
-		if((endsWith($target_path, ".png") || endsWith($target_path, ".jpg")
-		  || endsWith($target_path, ".avi") || endsWith($target_path, ".mp4")
-		  || endsWith($target_path, ".txt") || endsWith($target_path, ".zip")
-		  || endsWith($target_path, ".java") || endsWith($target_path, ".rb")
-		  || endsWith($target_path, ".js") || endsWith($target_path, ".c")
-		  || endsWith($target_path, ".cpp") || endsWith($target_path, ".h")
-		  || endsWith($target_path, ".obj") || endsWith($target_path, ".blend")
-		  || endsWith($target_path, ".fsh") || endsWith($target_path, ".vsh"))
-		  && move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path)) {
+		if(!endsWith($target_path, ".php")
+			&& !endsWith($target_path, ".htaccess")
+			&& !endsWith($target_path, ".htpasswd")
+			&& !endsWith($target_path, ".html")
+			&& move_uploaded_file($_FILES['uploadedfile']['tmp_name'], $target_path)) {
 			if (endsWith($target_path, ".png") || endsWith($target_path, ".jpg")) {
 				$obj->message = "#image https://www.ssl-id.de/hangout.f-online.net/api/".$target_path;
 			} else if (endsWith($target_path, ".avi") || endsWith($target_path, ".mp4")) {
 				$obj->message = "#video https://www.ssl-id.de/hangout.f-online.net/api/".$target_path;
-			} else if (endsWith($target_path, ".txt") || endsWith($target_path, ".zip")
-			  || endsWith($target_path, ".java") || endsWith($target_path, ".rb")
-			  || endsWith($target_path, ".js") || endsWith($target_path, ".c")
-			  || endsWith($target_path, ".cpp") || endsWith($target_path, ".h")
-			  || endsWith($target_path, ".obj") || endsWith($target_path, ".blend")
-			  || endsWith($target_path, ".fsh") || endsWith($target_path, ".vsh")) {
-				$obj->message = "#file https://www.ssl-id.de/hangout.f-online.net/api/".$target_path;
 			} else {
-					$returnValue = new Message;
-					$returnValue->msg = "Unknown datatype";
+				$obj->message = "https://www.ssl-id.de/hangout.f-online.net/api/".$target_path;
 			}
 			$returnValue = send($obj);
 		} else {
 			$returnValue = new Message;
-			$returnValue->msg = "Unknown datatype or upload failed!";
+			$returnValue->msg = "Unknown datatype or upload failed! ".basename( $_FILES['uploadedfile']['name']);
 		}
 	  }
 		
